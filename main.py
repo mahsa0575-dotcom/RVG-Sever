@@ -2015,9 +2015,12 @@ async def list_links(_=Depends(require_auth)):
                 "mtproto_port": d.get("mtproto_port"),
                 "running": mtproto.get_instance_info(uid) is not None,
             }
-        # وضعیت listener پورت اختصاصی
+        # وضعیت پورت: هسته‌ی خارجی یا listener داخلی
         lp = int(d.get("listen_port") or 0)
-        if lp and lp != int(CONFIG["port"]):
+        lcore = (d.get("core") or "unicorn").strip().lower()
+        if lcore in ("xray", "singbox"):
+            extra["port_status"] = "running" if core_manager.is_running(lcore) else "core down"
+        elif lp and lp != int(CONFIG["port"]):
             extra["port_status"] = "running" if port_manager.port_in_use_by_us(lp) else (
                 port_manager.port_errors.get(lp) or "stopped"
             )

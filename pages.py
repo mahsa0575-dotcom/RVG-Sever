@@ -3544,6 +3544,16 @@ function cmApplyProto(){
 /* ── امنیت ── */
 function cmSetSecurity(sec, el){
   cmSecurity = sec || '';
+  // Reality روی Unicorn terminate نمی‌شود → خودکار برو روی هسته‌ی Xray
+  if (cmSecurity === 'reality' && cmCore === 'unicorn'){
+    cmCore = 'xray';
+    document.getElementById('nl-core').value = 'xray';
+    toast('هسته‌ی Xray به‌صورت خودکار انتخاب شد ✓ (Reality واقعی)', 'ok');
+    cmUpdateRealityNote();
+    document.getElementById('cm-flow-panel').style.display =
+      (cmBase==='vless' && (cmCore==='xray'||cmCore==='singbox')) ? '' : 'none';
+    document.getElementById('cm-cert-panel').style.display = '';
+  }
   document.querySelectorAll('#sec-pills .cm-pill').forEach(p=>p.classList.toggle('active', p.dataset.sec===cmSecurity));
   document.getElementById('cm-tls-panel').style.display = cmSecurity==='tls' ? '' : 'none';
   document.getElementById('cm-reality-panel').style.display = cmSecurity==='reality' ? '' : 'none';

@@ -23,7 +23,8 @@ DATA_DIR = Path(__file__).resolve().parent / "data"
 
 # پروتکل‌هایی که به هسته‌ی خارجی نیاز دارند و پورت مستقل می‌خواهند
 CORE_PROTOCOLS = {
-    "xray": {"vless", "vmess", "trojan", "shadowsocks", "mtproto", "socks", "http"},
+    # mtproto در Xrayهای جدید حذف شده — فقط با هسته‌ی Unicorn سرو می‌شود
+    "xray": {"vless", "vmess", "trojan", "shadowsocks", "socks", "http"},
     "singbox": {"vless", "vmess", "trojan", "shadowsocks", "mixed", "http", "socks",
                 "hysteria", "hysteria2", "tuic"},
 }
@@ -213,11 +214,10 @@ def _xray_inbound(link: dict, uuid: str) -> dict | None:
         }
         protocol = "shadowsocks"
     elif base == "mtproto":
-        secret = link.get("mtproto_secret")
-        if not secret:
-            return None
-        settings = {"clients": [{"secret": secret}]}
-        protocol = "mtproto"
+        # Xrayهای جدید پروتکل mtproto را حذف کرده‌اند — MTProto فقط با
+        # هسته‌ی Unicorn (باینری رسمی تلگرام) سرو می‌شود؛ اینجا نادیده گرفته می‌شود.
+        logger.warning("core_configs: inbound mtproto برای xray نادیده گرفته شد (پشتیبانی نمی‌شود)")
+        return None
     elif base in ("socks", "http"):
         settings = {"auth": "password", "accounts": [{"user": uuid[:8], "pass": uuid}]}
         protocol = "socks" if base == "socks" else "http"
