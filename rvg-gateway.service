@@ -1,0 +1,16 @@
+[Unit]
+Description=RVG Gateway - Multi-Protocol Proxy Panel
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/rvg
+ExecStart=/opt/rvg/venv/bin/python main.py --port 8000
+EnvironmentFile=/etc/rvg-gateway.env
+Restart=always
+RestartSec=5
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
