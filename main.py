@@ -3151,6 +3151,8 @@ def _parse_args():
     parser = argparse.ArgumentParser(description="RVG Gateway — پنل مدیریت پروکسی چندپروتکلی (VPS)")
     parser.add_argument("--port", "-p", type=int, default=None, help="پورت پنل (پیش‌فرض: PORT یا 8000)")
     parser.add_argument("--host", type=str, default=None, help="دامنه/IP عمومی سرور برای لینک‌ها")
+    parser.add_argument("--set-password", type=str, default=None, metavar="PASS",
+                        help="تغییر رمز ادمین و خروج (سرویس باید هنگام اجرا متوقف باشد)")
     return parser.parse_args()
 
 
@@ -3160,6 +3162,26 @@ if __name__ == "__main__":
         CONFIG["port"] = _args.port
     if _args.host:
         CONFIG["host"] = _args.host
+
+    # ── ریست رمز ادمین: python main.py --set-password NEWPASS ──
+    if _args.set_password:
+        import hashlib as _hl
+        _secret = _get_or_create_secret()
+        _pw_hash = _hl.sha256(f"{_args.set_password}{_secret}".encode()).hexdigest()
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        data = {}
+        if DATA_FILE.exists():
+            try:
+                data = json.loads(DATA_FILE.read_text(encoding="utf-8"))
+            except Exception:
+                data = {}
+        data["password_hash"] = _pw_hash
+        _tmp = DATA_FILE.with_suffix(".tmp")
+        _tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        _tmp.replace(DATA_FILE)
+        print(f"✅ رمز ادمین با موفقیت تغییر کرد")
+        sys.exit(0)
+
     print("=" * 64)
     print("  RVG Gateway v10.0 — VPS Edition")
     print(f"  پنل:      http://0.0.0.0:{CONFIG['port']}/dashboard")
