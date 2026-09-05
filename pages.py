@@ -3454,18 +3454,22 @@ function cmCoreChange(){
   const hint = document.getElementById('core-hint');
   hint.style.display = '';
   hint.querySelector('span').textContent = 'پروتکل‌های موجود با هسته‌ی ' + (CORE_NAMES[cmCore]||cmCore) + ': ' + supported.join('، ');
-  const note = document.getElementById('cm-reality-note');
-  if (cmCore === 'unicorn'){
-    note.className = 'cl amber';
-    note.innerHTML = '<i class="ti ti-alert-triangle"></i><span>با هسته‌ی Unicorn، کلیدها و لینک استاندارد Reality ساخته می‌شوند اما ترافیک Reality سمت سرور terminate نمی‌شود. برای Reality <b>واقعی</b> هسته‌ی Xray یا sing-box را انتخاب کنید.</span>';
-  } else {
-    note.className = 'cl ok';
-    note.innerHTML = '<i class="ti ti-circle-check"></i><span>Reality <b>واقعی</b> با هسته‌ی ' + (CORE_NAMES[cmCore]) + ' فعال می‌شود — اینباند Reality روی سرور ساخته و سرو می‌شود.</span>';
-  }
+  cmUpdateRealityNote();
   document.getElementById('cm-flow-panel').style.display =
     (cmBase==='vless' && (cmCore==='xray'||cmCore==='singbox')) ? '' : 'none';
   document.getElementById('cm-cert-panel').style.display = (cmCore!=='unicorn') ? '' : 'none';
   cmBaseChange();
+}
+function cmUpdateRealityNote(){
+  const note = document.getElementById('cm-reality-note');
+  if (!note) return;
+  if (cmCore === 'unicorn'){
+    note.className = 'cl amber';
+    note.innerHTML = '<i class="ti ti-alert-triangle"></i><span>با هسته‌ی Unicorn، کلیدها و لینک استاندارد Reality ساخته می‌شوند اما ترافیک Reality سمت سرور terminate نمی‌شود. برای Reality <b>واقعی</b> هسته‌ی Xray یا sing-box را انتخاب کنید (یا پروتکل را عوض کن — خودم هسته را سوئیچ می‌کنم).</span>';
+  } else {
+    note.className = 'cl ok';
+    note.innerHTML = '<i class="ti ti-circle-check"></i><span>Reality <b>واقعی</b> با هسته‌ی ' + (CORE_NAMES[cmCore]) + ' فعال می‌شود — اینباند Reality روی سرور ساخته و سرو می‌شود.</span>';
+  }
 }
 
 /* ── تب‌ها ── */
@@ -3482,6 +3486,16 @@ function openCreateModal(){
 /* ── پروتکل و وابستگی‌ها ── */
 function cmBaseChange(){
   cmBase = document.getElementById('nl-base').value;
+  // ── انتخاب خودکار هسته: اگر هسته‌ی فعلی این پروتکل را سرو نمی‌کند، خودم سوئیچ می‌کنم ──
+  if (!CORE_PROTO[cmCore].includes(cmBase)) {
+    let target = 'xray';
+    if (['hysteria2','hysteria','tuic','mixed'].includes(cmBase)) target = 'singbox';
+    else if (cmBase === 'telproxy') target = 'unicorn';
+    cmCore = target;
+    document.getElementById('nl-core').value = target;
+    toast('هسته‌ی ' + (CORE_NAMES[target]||target) + ' به‌صورت خودکار انتخاب شد ✓', 'ok');
+  }
+  cmUpdateRealityNote();
   document.getElementById('cm-ss-panel').style.display = cmBase==='shadowsocks' ? '' : 'none';
   document.getElementById('cm-mt-panel').style.display = cmBase==='telproxy' ? '' : 'none';
   document.getElementById('cm-vmess-note').style.display = cmBase==='vmess' ? '' : 'none';
