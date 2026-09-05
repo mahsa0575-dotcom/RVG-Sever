@@ -161,6 +161,8 @@ def sync_ports_for_link(link: dict, uid: str, app, panel_port: int):
 
 
 async def _sync_link(link: dict, uid: str, app, panel_port: int):
+    if (link.get("core") or "unicorn") != "unicorn":
+        return  # پورت‌های هسته‌های خارجی را خود هسته bind می‌کند
     proto = link.get("protocol", "")
     active = bool(link.get("active", True))
     port = int(link.get("listen_port") or 0)
@@ -194,6 +196,8 @@ async def sync_all(LINKS: dict, LINKS_LOCK: asyncio.Lock, app, panel_port: int):
     for uid, d in snapshot:
         if not d.get("active", True):
             continue
+        if (d.get("core") or "unicorn") != "unicorn":
+            continue  # اینباند هسته‌ی خارجی — مدیریتش با core_manager است
         proto = d.get("protocol", "")
         port = int(d.get("listen_port") or 0)
         if not port or port == panel_port:

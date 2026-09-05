@@ -1674,6 +1674,14 @@ a{color:inherit;text-decoration:none}
       <!-- ── تب پروتکل ── -->
       <div class="ctab" id="ctab-protocol">
         <div class="cm-field">
+          <label><i class="ti ti-cpu" style="color:var(--accent);margin-left:4px"></i>هسته (Core)</label>
+          <select class="cm-input" id="nl-core" onchange="cmCoreChange()">
+            <option value="unicorn">Unicorn — هسته‌ی پایتونی خودمان (سبک و بدون وابستگی)</option>
+            <option value="xray">Xray — هسته‌ی رسمی XTLS (Reality واقعی + flow vision)</option>
+            <option value="singbox">sing-box — هسته‌ی S-UI (Hysteria2، TUIC، Mixed و…)</option>
+          </select>
+        </div>
+        <div class="cm-field">
           <label>پروتکل</label>
           <select class="cm-input" id="nl-base" onchange="cmBaseChange()">
             <option value="vless">VLESS — سبک، سریع و پرکاربرد</option>
@@ -1681,7 +1689,14 @@ a{color:inherit;text-decoration:none}
             <option value="trojan">Trojan — شبیه‌سازی ترافیک HTTPS</option>
             <option value="shadowsocks">Shadowsocks — رمزنگاری AEAD</option>
             <option value="telproxy">Telegram Proxy — MTProto</option>
+            <option value="hysteria2">Hysteria2 — پروتکل UDP پرسرعت (sing-box)</option>
+            <option value="hysteria">Hysteria v1 (sing-box)</option>
+            <option value="tuic">TUIC — UDP بر پایه QUIC (sing-box)</option>
+            <option value="mixed">Mixed — پروکسی SOCKS + HTTP (sing-box)</option>
+            <option value="http">HTTP Proxy (xray / sing-box)</option>
+            <option value="socks">SOCKS5 Proxy (xray / sing-box)</option>
           </select>
+          <div class="cl amber" id="core-hint" style="display:none;margin-top:8px"><i class="ti ti-info-circle"></i><span></span></div>
         </div>
 
         <div id="cm-ss-panel" style="display:none">
@@ -1804,7 +1819,25 @@ a{color:inherit;text-decoration:none}
               <button type="button" class="btn btn-o btn-sm" onclick="cmGenSid()"><i class="ti ti-refresh"></i> تولید</button>
             </div>
           </div>
-          <div class="cl amber" style="margin-top:10px"><i class="ti ti-alert-triangle"></i><span>کلیدها با فرمت استاندارد Xray (X25519) تولید و در لینک قرار می‌گیرند. توجه: ریلی سمت سرور این پنل هنوز Reality را terminate نمی‌کند (نیازمند هسته Xray — به‌زودی)؛ برای فعال‌بودن کامل، این کانفیگ را روی یک بک‌اند Xray واقعی همانند‌سازی کنید.</span></div>
+          <div id="cm-reality-note" class="cl amber" style="margin-top:10px"><i class="ti ti-alert-triangle"></i><span></span></div>
+          <div class="cm-field" id="cm-flow-panel" style="display:none;margin-top:10px"><label>Flow (فقط VLESS روی Reality/TLS-TCP)</label>
+            <select class="cm-input" id="nl-flow">
+              <option value="">بدون flow</option>
+              <option value="xtls-rprx-vision">xtls-rprx-vision (پیشنهادی برای Reality)</option>
+            </select>
+          </div>
+          <div class="cm-field" id="cm-sniff-panel" style="margin-top:10px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="nl-sniffing" checked style="accent-color:var(--accent);width:15px;height:15px">
+              Sniffing (تشخیص مقصد ترافیک — پیشنهادی روشن)
+            </label>
+          </div>
+          <div class="cm-field" id="cm-cert-panel" style="display:none;margin-top:4px">
+            <label>گواهی TLS (اختیاری — مسیر فایل روی سرور)</label>
+            <input class="cm-input" id="nl-tls-cert" dir="ltr" placeholder="/etc/letsencrypt/live/.../fullchain.pem">
+            <input class="cm-input" id="nl-tls-key" dir="ltr" placeholder="/etc/letsencrypt/live/.../privkey.pem" style="margin-top:6px">
+            <div style="font-size:11px;color:var(--t3);margin-top:4px">خالی = گواهی خودامضا خودکار ساخته می‌شود (کلاینت باید insecure را فعال کند).</div>
+          </div>
         </div>
 
         <div id="cm-sec-na" class="cl amber" style="display:none;margin-top:10px"><i class="ti ti-info-circle"></i><span>امنیت TLS/Reality فقط برای VLESS، VMess و Trojan معنا دارد.</span></div>
@@ -2866,6 +2899,14 @@ a{color:inherit;text-decoration:none}
 <section class="pg" id="pg-settings">
   <div class="topbar"><div><div class="tb-title"><i class="ti ti-settings"></i> تنظیمات</div></div></div>
   <div class="card" style="margin-bottom:16px">
+    <div class="card-title"><i class="ti ti-cpu"></i> هسته‌های پروکسی (Xray / sing-box)
+      <button class="btn btn-g btn-sm" style="margin-right:auto" onclick="loadCores()"><i class="ti ti-refresh"></i> رفرش</button>
+      <button class="btn btn-p btn-sm" onclick="installCores()"><i class="ti ti-download"></i> نصب / به‌روزرسانی هر دو</button>
+    </div>
+    <div id="cores-list" style="display:flex;flex-direction:column;gap:8px"><div style="font-size:11.5px;color:var(--t3)">در حال دریافت وضعیت...</div></div>
+    <div class="cl amber" style="margin-top:10px"><i class="ti ti-info-circle"></i><span>هسته‌ها فقط روی سرور لینوکسی نصب و اجرا می‌شوند. کانفیگ‌هایی که هنگام ساخت، هسته‌ی Xray یا sing-box گرفته باشند روی همین هسته‌ها سرو می‌شوند (Reality واقعی، Hysteria2، TUIC و…).</span></div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
     <div class="card-title"><i class="ti ti-server-2"></i> تنظیمات سرور (VPS)</div>
     <div class="form-row" style="display:flex;gap:10px;flex-wrap:wrap">
       <div style="flex:2;min-width:220px">
@@ -3393,7 +3434,39 @@ function qcTab(name, el){
   document.getElementById('qc-pane-'+name).classList.add('active');
 }
 
-let cmBase = 'vless', cmTransport = 'ws', cmSecurity = '';
+let cmBase = 'vless', cmTransport = 'ws', cmSecurity = '', cmCore = 'unicorn';
+
+const CORE_PROTO = {
+  unicorn: ['vless','vmess','trojan','shadowsocks','telproxy'],
+  xray: ['vless','vmess','trojan','shadowsocks','telproxy','http','socks'],
+  singbox: ['vless','vmess','trojan','shadowsocks','hysteria2','hysteria','tuic','mixed','http','socks'],
+};
+const CORE_NAMES = {unicorn:'Unicorn', xray:'Xray', singbox:'sing-box'};
+
+function cmCoreChange(){
+  cmCore = document.getElementById('nl-core').value;
+  const supported = CORE_PROTO[cmCore] || [];
+  document.querySelectorAll('#nl-base option').forEach(function(o){ o.disabled = !supported.includes(o.value); });
+  if (!supported.includes(cmBase)){
+    document.getElementById('nl-base').value = supported[0];
+    cmBase = supported[0];
+  }
+  const hint = document.getElementById('core-hint');
+  hint.style.display = '';
+  hint.querySelector('span').textContent = 'پروتکل‌های موجود با هسته‌ی ' + (CORE_NAMES[cmCore]||cmCore) + ': ' + supported.join('، ');
+  const note = document.getElementById('cm-reality-note');
+  if (cmCore === 'unicorn'){
+    note.className = 'cl amber';
+    note.innerHTML = '<i class="ti ti-alert-triangle"></i><span>با هسته‌ی Unicorn، کلیدها و لینک استاندارد Reality ساخته می‌شوند اما ترافیک Reality سمت سرور terminate نمی‌شود. برای Reality <b>واقعی</b> هسته‌ی Xray یا sing-box را انتخاب کنید.</span>';
+  } else {
+    note.className = 'cl ok';
+    note.innerHTML = '<i class="ti ti-circle-check"></i><span>Reality <b>واقعی</b> با هسته‌ی ' + (CORE_NAMES[cmCore]) + ' فعال می‌شود — اینباند Reality روی سرور ساخته و سرو می‌شود.</span>';
+  }
+  document.getElementById('cm-flow-panel').style.display =
+    (cmBase==='vless' && (cmCore==='xray'||cmCore==='singbox')) ? '' : 'none';
+  document.getElementById('cm-cert-panel').style.display = (cmCore!=='unicorn') ? '' : 'none';
+  cmBaseChange();
+}
 
 /* ── تب‌ها ── */
 function cmShowTab(name){
@@ -3402,6 +3475,7 @@ function cmShowTab(name){
 }
 function openCreateModal(){
   cmShowTab('base');
+  cmCoreChange();
   openModal('modal-create-link');
 }
 
@@ -3422,11 +3496,14 @@ function cmBaseChange(){
   const realityPill = document.querySelector('#sec-pills [data-sec="reality"]');
   if (realityPill) realityPill.style.display = (cmBase==='vless'||cmBase==='trojan') ? '' : 'none';
   if (cmSecurity==='reality' && !(cmBase==='vless'||cmBase==='trojan')) cmSetSecurity('', null);
-  // استریم بی‌معنا برای SS/Telproxy
-  const na = (cmBase==='shadowsocks' || cmBase==='telproxy');
+  // استریم بی‌معنا برای SS/Telproxy و پروتکل‌های هسته‌ای بدون ترنسپورت
+  const coreNoTransport = ['hysteria2','hysteria','tuic','mixed','http','socks'].includes(cmBase) && cmCore!=='unicorn';
+  const na = (cmBase==='shadowsocks' || cmBase==='telproxy' || coreNoTransport);
   document.getElementById('stream-unavailable').style.display = na ? '' : 'none';
   document.getElementById('nl-transport').disabled = na;
   document.getElementById('nl-fp').disabled = na;
+  document.getElementById('cm-flow-panel').style.display =
+    (cmBase==='vless' && (cmCore==='xray'||cmCore==='singbox')) ? '' : 'none';
   cmApplyProto();
 }
 function cmTransportChange(){ cmTransport = document.getElementById('nl-transport').value; cmApplyProto(); }
@@ -3553,9 +3630,14 @@ async function createLink(){
   const reality_pub = document.getElementById('nl-reality-pub').value.trim() || null;
   const reality_sid = document.getElementById('nl-reality-sid').value.trim() || null;
   const reality_dest = document.getElementById('nl-reality-dest').value.trim() || null;
+  const core = document.getElementById('nl-core').value || 'unicorn';
+  const flow = (document.getElementById('cm-flow-panel').style.display !== 'none') ? (document.getElementById('nl-flow').value || null) : null;
+  const sniffing = document.getElementById('nl-sniffing').checked;
+  const tls_cert = document.getElementById('nl-tls-cert').value.trim() || null;
+  const tls_key = document.getElementById('nl-tls-key').value.trim() || null;
   try{
     const url = nodeId ? ('/api/nodes/'+nodeId+'/links') : '/api/links';
-    const r=await authF(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label,limit_value:val||0,limit_unit:unit,expires_days:exp||0,note,sub_id,protocol,listen_port,public_port,mtproto_port:listen_port,mtproto_domain,alpn,fingerprint,ss_cipher,security,sni,reality_priv,reality_pub,reality_sid,reality_dest})});
+    const r=await authF(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label,limit_value:val||0,limit_unit:unit,expires_days:exp||0,note,sub_id,protocol,core,listen_port,public_port,mtproto_port:listen_port,mtproto_domain,alpn,fingerprint,ss_cipher,security,sni,reality_priv,reality_pub,reality_sid,reality_dest,flow,sniffing,tls_cert,tls_key})});
     if(!r.ok){
       const d=await r.json().catch(()=>({}));
       throw new Error(d.detail||'failed');
@@ -4269,6 +4351,39 @@ async function loadLoggingSetting(){
     document.getElementById('disable-logging-tog')?.classList.toggle('on', !!d.disabled);
   }catch(e){}
 }
+async function loadCores(){
+  try{
+    const r = await authF('/api/cores'), d = await r.json();
+    const box = document.getElementById('cores-list');
+    const rows = [];
+    for (const name of ['xray','singbox']){
+      const c = (d.cores||{})[name] || {};
+      const inb = (d.inbounds||{})[name] || 0;
+      const ver = c.version || (c.installed ? 'نصب‌شده (نسخه نامشخص)' : 'نصب نشده');
+      rows.push(`<div class="sr" style="padding:8px 0;border:none">
+        <span class="sr-k" style="font-size:12px"><i class="ti ${c.running?'ti-circle-check':'ti-circle-pause'}" style="color:${c.running?'var(--green-t)':'var(--t3)'}"></i>
+        ${name==='xray'?'Xray (XTLS)':'sing-box'}</span>
+        <span class="sr-v" style="font-size:11px">${esc(String(ver)).slice(0,60)} · ${inb} اینباند ${c.running?'· در حال اجرا':''}</span>
+      </div>`);
+    }
+    box.innerHTML = rows.join('');
+  }catch(e){
+    const box = document.getElementById('cores-list');
+    if (box) box.innerHTML = '<div style="font-size:11px;color:var(--t3)">وضعیت هسته‌ها دریافت نشد</div>';
+  }
+}
+async function installCores(){
+  try{
+    toast('در حال نصب هسته‌ها (دانلود از GitHub)...');
+    for (const name of ['xray','singbox']){
+      const r = await authF('/api/cores/install/'+name, {method:'POST'});
+      const d = await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.detail || ('نصب '+name+' ناموفق'));
+    }
+    toast('هسته‌ها نصب شدند ✓','ok');
+    await loadCores();
+  }catch(e){ toast('✗ '+(e.message||'خطا در نصب'),'err'); }
+}
 let ssTls = false;
 function toggleSsTls(){ ssTls = !ssTls; document.getElementById('ss-tls-tog').classList.toggle('on', ssTls); }
 async function loadServerSettings(){
@@ -4339,6 +4454,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('set-host').textContent = location.host;
   loadLoggingSetting();
   loadServerSettings();
+  loadCores();
   document.getElementById('sub-all-url') && 
     (document.getElementById('sub-all-url').textContent = 
       location.protocol + '//' + location.host + '/sub-all');

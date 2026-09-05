@@ -43,6 +43,8 @@ from urllib.parse import quote
 from collections import deque, defaultdict
 from pathlib import Path
 import zeussocks5
+import core_manager
+import core_configs
 from protocol.mtproto import mtproto_native as mtproto
 from typing import Optional
 import base64
@@ -287,7 +289,43 @@ PROTOCOLS = (
     "trojan-ws", "trojan-httpupgrade", "trojan-xhttp-packet-up", "trojan-xhttp-stream-up",
     "vmess-ws", "vmess-httpupgrade", "vmess-tcp",
     "mtproto", "shadowsocks", "shadowsocks-tcp",
+    # هسته‌های خارجی (xray / sing-box) — همه با پورت مستقل
+    "vless", "vmess", "trojan", "shadowsocks",
+    "hysteria2", "hysteria", "tuic", "mixed", "http", "socks",
 )
+CORE_PROTOCOL_SUPPORTED = {
+    "unicorn": {"vless-ws", "vless-httpupgrade", "xhttp-packet-up", "xhttp-stream-up",
+                "trojan-ws", "trojan-httpupgrade", "trojan-xhttp-packet-up", "trojan-xhttp-stream-up",
+                "vmess-ws", "vmess-httpupgrade", "vmess-tcp",
+                "mtproto", "shadowsocks", "shadowsocks-tcp"},
+    "xray": {"vless", "vmess", "trojan", "shadowsocks", "mtproto", "socks", "http",
+             "vless-ws", "vless-httpupgrade", "vless-xhttp-packet-up", "vless-xhttp-stream-up",
+             "vmess-ws", "vmess-httpupgrade", "trojan-ws", "trojan-httpupgrade",
+             "trojan-xhttp-packet-up", "trojan-xhttp-stream-up", "shadowsocks"},
+    "singbox": {"vless", "vmess", "trojan", "shadowsocks", "mixed", "http", "socks",
+                "hysteria2", "hysteria", "tuic",
+                "vless-ws", "vless-httpupgrade", "vmess-ws", "vmess-httpupgrade",
+                "trojan-ws", "trojan-httpupgrade", "shadowsocks"},
+}
+
+
+def _proto_base(protocol: str) -> str:
+    """پروتکل پایه از کلید پروتکل (vless-ws → vless)."""
+    for b in ("vless", "vmess", "trojan", "shadowsocks", "mtproto"):
+        if protocol == b or protocol.startswith(b + "-"):
+            return b
+    return protocol
+
+
+def _proto_core_support(protocol: str) -> list:
+    """هسته‌هایی که این پروتکل را سرو می‌کنند."""
+    base = _proto_base(protocol)
+    out = []
+    for core, protos in CORE_PROTOCOL_SUPPORTED.items():
+        if protocol in protos or (base in core_configs.CORE_PROTOCOLS.get(core, set())
+                                  and base in ("vless", "vmess", "trojan", "shadowsocks")):
+            out.append(core)
+    return out or ["unicorn"]
 DEFAULT_PROTOCOL = "vless-ws"
 
 # پروتکل‌هایی که روی خود پنل (همان پورت، مسیر-based) سرو می‌شوند
@@ -351,6 +389,46 @@ async def require_auth(request: Request):
 
 # ── Startup / Shutdown ────────────────────────────────────────────────────────
 @app.on_event("startup")
+async def _sync_cores():
+    """کانفیگ هسته‌های xray/sing-box را از روی لینک‌ها بازتولید و پروسه‌ها را
+    همگام می‌کند (مدل 3x-ui/S-UI: یک پروسه برای کل هسته)."""
+    import hashlib as _hl
+    if platform_guard():
+        return
+    by_core = {"xray": [], "singbox": []}
+    async with LINKS_LOCK:
+        for uid, d in LINKS.items():
+            core = (d.get("core") or "unicorn").strip().lower()
+            if core in by_core and d.get("active", True):
+                by_core[core].append({"uuid": uid, **d})
+    for name in ("xray", "singbox"):
+        links = by_core[name]
+        try:
+            if not links:
+                if core_manager.is_running(name):
+                    await core_manager.stop_core(name)
+                continue
+            path = core_configs.write_core_config(name, links, DATA_DIR)
+            h = _hl.md5(path.read_bytes()).hexdigest()
+            if core_manager.is_running(name) and _core_cfg_hash.get(name) == h:
+                continue
+            await core_manager.start_core(name, path)
+            _core_cfg_hash[name] = h
+            log_activity("system", f"هسته‌ی {name} با {len(links)} اینباند همگام شد", "ok")
+        except Exception as exc:
+            logger.warning(f"core sync {name} ناموفق: {exc}")
+            log_activity("system", f"همگام‌سازی هسته‌ی {name} ناموفق: {str(exc)[:140]}", "err")
+
+
+def platform_guard() -> bool:
+    """True اگر هسته‌های خارجی روی این سیستم قابل اجرا نباشند (مثلاً ویندوز توسعه)."""
+    import platform as _p
+    return _p.system() != "Linux"
+
+
+_core_cfg_hash: dict = {}
+
+
 async def _auto_detect_host():
     """اگر دامنه/IP عمومی در تنظیمات یا RVG_HOST ست نشده باشد، IP عمومی سرور
     را خودکار تشخیص می‌دهد تا لینک‌ها به‌جای localhost با آدرس واقعی ساخته شوند.
@@ -399,6 +477,7 @@ async def startup():
     await ensure_default_link()
     await _auto_detect_host()
     await _register_vmess_users()
+    spawn(_sync_cores())
     await _restart_mtproto_instances()
     await port_manager.sync_all(LINKS, LINKS_LOCK, app, CONFIG["port"])
     log_activity("system", "سرور راه‌اندازی شد", "ok")
@@ -629,10 +708,28 @@ def generate_share_link(uuid: str, host: str, remark: str = "RVG", protocol: str
         password = link.get("ss_password", "")
         return generate_ss_link(host, port, cipher, password, remark, plugin=True, ws_host=host)
 
+    # ── پروتکل‌های هسته‌های خارجی (xray / sing-box) ──
+    if protocol in ("hysteria2", "hysteria", "tuic"):
+        s_ = _link_sni(link, host)
+        if protocol == "hysteria2":
+            return f"hy2://{uuid}@{host}:{port}/?sni={quote(s_)}&insecure=1#{quote(remark)}"
+        if protocol == "hysteria":
+            return f"hysteria://{host}:{port}?auth={uuid}&peer={quote(s_)}&insecure=1#{quote(remark)}"
+        return (f"tuic://{uuid}:{uuid[:12]}@{host}:{port}"
+                f"?sni={quote(s_)}&congestion_control=bbr&insecure=1&alpn=h3#{quote(remark)}")
+
+    if protocol in ("mixed", "http", "socks"):
+        userinfo = base64.urlsafe_b64encode(f"{uuid[:8]}:{uuid}".encode()).decode().rstrip("=")
+        scheme = "socks" if protocol == "socks" else protocol
+        return f"{scheme}://{userinfo}@{host}:{port}#{quote(remark)}"
+
     # ── Reality — فقط برای VLESS/Trojan روی TCP (فرمت استاندارد Xray) ──
     if security == "reality" and (protocol == "vless" or protocol.startswith(("vless-ws", "vless-httpupgrade", "vless-xhttp", "trojan"))):
         scheme = "trojan" if protocol.startswith("trojan") else "vless"
         extra = "&encryption=none" if scheme == "vless" else ""
+        flow = (link.get("flow") or "").strip() or ("xtls-rprx-vision" if scheme == "vless" else "")
+        if flow:
+            extra += f"&flow={quote(flow)}"
         return (
             f"{scheme}://{uuid}@{host}:{port}?type=tcp&security=reality"
             f"&pbk={quote(link.get('reality_pub') or '')}&sni={quote(sni)}"
@@ -1473,6 +1570,48 @@ async def api_ports(_=Depends(require_auth)):
     }
 
 
+@app.get("/api/cores")
+async def api_cores(_=Depends(require_auth)):
+    async with LINKS_LOCK:
+        counts = {"xray": 0, "singbox": 0}
+        for d in LINKS.values():
+            c = (d.get("core") or "unicorn").strip().lower()
+            if c in counts and d.get("active", True):
+                counts[c] += 1
+    return {
+        "cores": {
+            "xray": await core_manager.full_status("xray"),
+            "singbox": await core_manager.full_status("singbox"),
+        },
+        "inbounds": counts,
+        "supported": {"xray": sorted(core_configs.CORE_PROTOCOLS["xray"]),
+                      "singbox": sorted(core_configs.CORE_PROTOCOLS["singbox"])},
+    }
+
+
+@app.post("/api/cores/install/{name}")
+async def api_cores_install(name: str, _=Depends(require_auth)):
+    if name not in ("xray", "singbox"):
+        raise HTTPException(status_code=400, detail="هسته‌ی نامعتبر")
+    if platform_guard():
+        raise HTTPException(status_code=400, detail="نصب هسته فقط روی سرور لینوکسی ممکن است")
+    try:
+        await core_manager.install(name)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"نصب ناموفق: {str(exc)[:200]}")
+    spawn(_sync_cores())
+    return {"ok": True, "version": await core_manager.get_version(name)}
+
+
+@app.post("/api/cores/resync")
+async def api_cores_resync(_=Depends(require_auth)):
+    await _sync_cores()
+    return {"ok": True, "cores": {
+        "xray": core_manager.core_status("xray"),
+        "singbox": core_manager.core_status("singbox"),
+    }}
+
+
 @app.post("/api/ports/resync")
 async def api_ports_resync(_=Depends(require_auth)):
     """بازسازی کامل listenerها از روی state (بعد از تغییر دستی/خطا)."""
@@ -1650,11 +1789,12 @@ async def reality_gen(_=Depends(require_auth)):
 
 
 # ── Link Management ───────────────────────────────────────────────────────────
-async def _allocate_listen_port(protocol: str, requested) -> int:
+async def _allocate_listen_port(protocol: str, requested, core: str = "unicorn") -> int:
     """پورت اختصاصی کانفیگ را تعیین می‌کند:
     - requested معتبر → همان (باید آزاد و تکراری نباشد)
-    - protocol پورت‌خواه (vmess-tcp/shadowsocks-tcp) → خودکار از بازه
+    - پورت‌خواه (vmess-tcp/shadowsocks-tcp یا هر پروتکل هسته‌ی خارجی) → خودکار از بازه
     - غیر از آن → ۰ یعنی روی پورت خود پنل"""
+    needs_own = core != "unicorn" or protocol in OWN_PORT_PROTOCOLS
     used = {int(d.get("listen_port") or 0) for d in LINKS.values()}
     used |= set(port_manager._uvicorn_servers.keys())
     used |= set(port_manager._tcp_servers.keys())
@@ -1671,7 +1811,7 @@ async def _allocate_listen_port(protocol: str, requested) -> int:
             raise HTTPException(status_code=409, detail=f"پورت {p} قبلاً استفاده شده است")
         return p
 
-    if protocol in OWN_PORT_PROTOCOLS:
+    if needs_own:
         lo, hi = CONFIG.get("port_range", [20000, 40000])
         p = port_manager.find_free_port(int(lo), int(hi), exclude=used)
         if p is None:
@@ -1708,7 +1848,15 @@ async def _create_link_core(body: dict) -> dict:
     requested_port = body.get("listen_port")
     if protocol == "mtproto" and requested_port in (None, "", 0, "0"):
         requested_port = body.get("mtproto_port")
-    listen_port = await _allocate_listen_port(protocol, requested_port)
+    core = (body.get("core") or "unicorn").strip().lower()
+    if core not in ("unicorn", "xray", "singbox"):
+        core = "unicorn"
+    if protocol not in CORE_PROTOCOL_SUPPORTED.get(core, set()):
+        raise HTTPException(
+            status_code=400,
+            detail=f"پروتکل «{protocol}» با هسته‌ی «{core}» پشتیبانی نمی‌شود — هسته را تغییر دهید"
+        )
+    listen_port = await _allocate_listen_port(protocol, requested_port, core)
 
     link_data = {
         "label": label,
@@ -1723,6 +1871,7 @@ async def _create_link_core(body: dict) -> dict:
         "is_default": False,
         "sub_id": sub_id,
         "protocol": protocol,
+        "core": core,
         "ad_tag": None,
         "listen_port": listen_port,
         "public_port": 0,
@@ -1759,6 +1908,13 @@ async def _create_link_core(body: dict) -> dict:
         link_data["ss_cipher"] = ss_cipher
         link_data["ss_password"] = secrets.token_urlsafe(16)
 
+    link_data["flow"] = (body.get("flow") or "").strip()[:40]
+    link_data["sniffing"] = bool(body.get("sniffing", True))
+    if body.get("tls_cert"):
+        link_data["tls_cert"] = str(body["tls_cert"]).strip()[:300]
+    if body.get("tls_key"):
+        link_data["tls_key"] = str(body["tls_key"]).strip()[:300]
+
     # ── امنیت (none/tls/reality) و SNI ──
     security = (body.get("security") or "").strip().lower()
     if security not in ("none", "tls", "reality"):
@@ -1790,8 +1946,10 @@ async def _create_link_core(body: dict) -> dict:
     async with LINKS_LOCK:
         LINKS[uid] = link_data
 
-    # روشن کردن listener پورت اختصاصی (برای TCPهای خام و HTTP اضافی)
-    port_manager.sync_ports_for_link(link_data, uid, app, CONFIG["port"])
+    # روشن کردن listener پورت اختصاصی (فقط unicorn — هسته‌های خارجی خودشان bind می‌کنند)
+    if core == "unicorn":
+        port_manager.sync_ports_for_link(link_data, uid, app, CONFIG["port"])
+    spawn(_sync_cores())
 
     if sub_id:
         async with SUBS_LOCK:
@@ -2011,6 +2169,8 @@ async def update_link(uid: str, request: Request, _=Depends(require_auth)):
                 logger.error(f"تغییر پورت MTProto ناموفق برای {uid[:8]}: {exc}")
                 raise HTTPException(status_code=502, detail=f"تغییر پورت MTProto ناموفق بود: {exc}")
 
+    if core_links_present():
+        spawn(_sync_cores())
     spawn(save_state())
     return {"ok": True}
 
@@ -2066,6 +2226,7 @@ async def delete_link(uid: str, _=Depends(require_auth)):
     if listen_port:
         # listener پورت اختصاصی فقط اگر هیچ کانفیگ دیگری آن را نخواهد بسته می‌شود
         spawn(_release_port_if_unused(listen_port))
+    spawn(_sync_cores())
     if sub_id:
         async with SUBS_LOCK:
             if sub_id in SUBS:
@@ -2075,6 +2236,10 @@ async def delete_link(uid: str, _=Depends(require_auth)):
     spawn(save_state())
     log_activity("link", f"کانفیگ «{label}» حذف شد", "err")
     return {"ok": True, "deleted": uid}
+
+
+def core_links_present() -> bool:
+    return any((d.get("core") or "unicorn") != "unicorn" for d in LINKS.values())
 
 
 async def _release_port_if_unused(port: int):
