@@ -64,6 +64,10 @@ async def _start_uvicorn_port(port: int, app, host: str = "0.0.0.0") -> bool:
     async with _uvi_lock:
         if port in _uvicorn_servers:
             return True
+        if not _port_free(port):
+            port_errors[port] = f"پورت {port} اشغال است"
+            logger.error(f"پورت {port} آزاد نیست — listener بالا نمی‌آید")
+            return False
         try:
             config = uvicorn.Config(
                 app, host=host, port=port,
@@ -72,12 +76,22 @@ async def _start_uvicorn_port(port: int, app, host: str = "0.0.0.0") -> bool:
                 ws="auto",
             )
             server = uvicorn.Server(config)
-            # ثبت فوری — خودِ عملیات bind داخل serve() است؛ اگر بلافاصله مرد،
-            # پایین‌تر از رجیستری حذف و در port_errors ثبت می‌شود.
-            task = spawn(server.serve())
+
+            async def _serve_safe():
+                # uvicorn در شکست bind با sys.exit خارج می‌شود؛ SystemExit داخل
+                # تسک در uvloop کل loop را می‌کشد — اینجا خنثی می‌شود.
+                try:
+                    await server.serve()
+                except SystemExit as e:
+                    logger.warning(f"uvicorn پورت {port}: خروج ({e.code})")
+                except BaseException as e:
+                    logger.warning(f"uvicorn پورت {port}: {e}")
+
+            # ثبت فوری — اگر بلافاصله مرد، پایین‌تر از رجیستری حذف می‌شود
+            task = spawn(_serve_safe())
             _uvicorn_servers[port] = server
             port_errors.pop(port, None)
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.6)
             if task.done() and not server.started:
                 _uvicorn_servers.pop(port, None)
                 raise RuntimeError("uvicorn بلافاصله متوقف شد")
@@ -108,6 +122,10 @@ async def _start_tcp_port(port: int, kind: str, uuid: str = "", host: str = "0.0
     async with _tcp_lock:
         if port in _tcp_servers:
             return True
+        if not _port_free(port):
+            port_errors[port] = f"پورت {port} اشغال است"
+            logger.error(f"پورت {port} آزاد نیست — سرور {kind} بالا نمی‌آید")
+            return False
         try:
             if kind == "vmess":
                 from protocol.vmess import tcp_server as vt
@@ -164,6 +182,8 @@ async def _sync_link(link: dict, uid: str, app, panel_port: int):
     if (link.get("core") or "unicorn") != "unicorn":
         return  # پورت‌های هسته‌های خارجی را خود هسته bind می‌کند
     proto = link.get("protocol", "")
+    if proto == "mtproto":
+        return  # پورت MTProto را باینری رسمی تلگرام bind می‌کند — دست نزن
     active = bool(link.get("active", True))
     port = int(link.get("listen_port") or 0)
     kind = tcp_kind(proto)
@@ -198,6 +218,8 @@ async def sync_all(LINKS: dict, LINKS_LOCK: asyncio.Lock, app, panel_port: int):
             continue
         if (d.get("core") or "unicorn") != "unicorn":
             continue  # اینباند هسته‌ی خارجی — مدیریتش با core_manager است
+        if d.get("protocol") == "mtproto":
+            continue  # پورت MTProto را mtproto-native خودش bind می‌کند
         proto = d.get("protocol", "")
         port = int(d.get("listen_port") or 0)
         if not port or port == panel_port:
