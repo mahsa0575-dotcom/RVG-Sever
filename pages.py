@@ -2957,6 +2957,26 @@ a{color:inherit;text-decoration:none}
 </section>
 </main>
 <script>
+/* ── کپی سازگار با HTTP: clipboard API فقط در محیط امن (HTTPS/localhost) در دسترس است ── */
+(function(){
+  if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) return;
+  if (!navigator.clipboard) navigator.clipboard = {};
+  navigator.clipboard.writeText = function(text){
+    return new Promise(function(resolve, reject){
+      try{
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly','');
+        ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+        document.body.appendChild(ta);
+        ta.focus(); ta.select();
+        var ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (ok) resolve(); else reject(new Error('copy rejected'));
+      }catch(e){ reject(e); }
+    });
+  };
+})();
 let isDark=localStorage.getItem('rvg-theme')!=='light';
 let updateAvailable = false;
 let updateVersion = '';
@@ -5378,6 +5398,26 @@ html,body{{min-height:100%;background:var(--bg);font-family:var(--serif);color:v
   <div class="footer">کانال رسمی: <a href="https://t.me/CodeBoxo" target="_blank">@CodeBoxo</a> · RVG Gateway v10.0</div>
 </div>
 <script>
+/* ── کپی سازگار با HTTP: clipboard API فقط در محیط امن (HTTPS/localhost) در دسترس است ── */
+(function(){{
+  if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) return;
+  if (!navigator.clipboard) navigator.clipboard = {{}};
+  navigator.clipboard.writeText = function(text){{
+    return new Promise(function(resolve, reject){{
+      try{{
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly','');
+        ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+        document.body.appendChild(ta);
+        ta.focus(); ta.select();
+        var ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (ok) resolve(); else reject(new Error('copy rejected'));
+      }}catch(e){{ reject(e); }}
+    }});
+  }};
+}})();
 const UUID_KEY='{uuid_key}';
 let savedPw='';
 

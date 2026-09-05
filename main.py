@@ -29,6 +29,7 @@ def _install_packages():
 import asyncio
 import json
 import os
+import socket
 import hashlib
 import secrets
 import sys
@@ -350,6 +351,42 @@ async def require_auth(request: Request):
 
 # ── Startup / Shutdown ────────────────────────────────────────────────────────
 @app.on_event("startup")
+async def _auto_detect_host():
+    """اگر دامنه/IP عمومی در تنظیمات یا RVG_HOST ست نشده باشد، IP عمومی سرور
+    را خودکار تشخیص می‌دهد تا لینک‌ها به‌جای localhost با آدرس واقعی ساخته شوند.
+    مقدار ذخیره نمی‌شود؛ اگر کاربر در تنظیمات چیزی ست کند، همان اولویت دارد."""
+    if (CONFIG.get("host") or "").strip():
+        return
+    detected = ""
+    for url in ("https://api.ipify.org", "https://ipv4.icanhazip.com"):
+        try:
+            r = await http_client.get(url, timeout=8)
+            ip = (r.text or "").strip()
+            # فقط یک IP تمیز — بدون خط جدید، فاصله یا کاراکتر غیرمنتظره
+            if ip and ip.replace(".", "").isdigit() and ip.count(".") == 3:
+                detected = ip
+                break
+        except Exception:
+            continue
+    if not detected:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                s.connect(("8.8.8.8", 80))
+                detected = s.getsockname()[0]
+            finally:
+                s.close()
+        except Exception:
+            pass
+    if detected:
+        CONFIG["host"] = detected
+        logger.info(
+            f"دامنه/IP عمومی خودکار تشخیص داده شد: {detected} — "
+            f"از پنل (تنظیمات → تنظیمات سرور) قابل تغییر است"
+        )
+        log_activity("system", f"IP عمومی خودکار تنظیم شد: {detected}", "info")
+
+
 async def startup():
     spawn(central.heartbeat_loop())
     global http_client
@@ -360,6 +397,7 @@ async def startup():
     )
     await load_state()
     await ensure_default_link()
+    await _auto_detect_host()
     await _register_vmess_users()
     await _restart_mtproto_instances()
     await port_manager.sync_all(LINKS, LINKS_LOCK, app, CONFIG["port"])
