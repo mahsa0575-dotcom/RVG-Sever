@@ -309,7 +309,8 @@ CORE_PROTOCOL_SUPPORTED = {
                 "trojan-ws", "trojan-httpupgrade", "trojan-xhttp-packet-up", "trojan-xhttp-stream-up",
                 "vmess-ws", "vmess-httpupgrade", "vmess-tcp",
                 "mtproto", "shadowsocks", "shadowsocks-tcp"},
-    "xray": {"vless", "vmess", "trojan", "shadowsocks", "mtproto", "socks", "http",
+    # mtproto در Xrayهای جدید حذف شده — فقط با هسته‌ی Unicorn سرو می‌شود
+    "xray": {"vless", "vmess", "trojan", "shadowsocks", "socks", "http",
              "vless-ws", "vless-httpupgrade", "vless-xhttp-packet-up", "vless-xhttp-stream-up",
              "vmess-ws", "vmess-httpupgrade", "trojan-ws", "trojan-httpupgrade",
              "trojan-xhttp-packet-up", "trojan-xhttp-stream-up", "shadowsocks"},
@@ -405,6 +406,8 @@ async def _sync_cores():
     import hashlib as _hl
     if platform_guard():
         return
+    if _migrate_invalid_core_links():
+        spawn(save_state())
     by_core = {"xray": [], "singbox": []}
     async with LINKS_LOCK:
         for uid, d in LINKS.items():
@@ -2263,6 +2266,26 @@ async def delete_link(uid: str, _=Depends(require_auth)):
 
 def core_links_present() -> bool:
     return any((d.get("core") or "unicorn") != "unicorn" for d in LINKS.values())
+
+
+def _migrate_invalid_core_links() -> bool:
+    """ترکیب‌های پروتکل/هسته‌ی نامعتبر (مثلاً MTProto روی xray که Xrayهای جدید
+    پشتیبانی نمی‌کنند) خودکار به هسته‌ی سازگار منتقل می‌شوند."""
+    changed = False
+    for d in LINKS.values():
+        core = (d.get("core") or "unicorn").strip().lower()
+        if core == "unicorn":
+            continue
+        if d.get("protocol") in CORE_PROTOCOL_SUPPORTED.get(core, set()):
+            continue
+        if d.get("protocol") in CORE_PROTOCOL_SUPPORTED.get("unicorn", set()):
+            logger.warning(
+                f"مهاجرت خودکار کانفیگ «{d.get('label')}» از هسته‌ی {core} به unicorn "
+                f"(ترکیب {d.get('protocol')} + {core} پشتیبانی نمی‌شود)"
+            )
+            d["core"] = "unicorn"
+            changed = True
+    return changed
 
 
 async def _release_port_if_unused(port: int):

@@ -123,6 +123,16 @@ async def install(name: str) -> Path:
            f"v{SINGBOX_VERSION}/sing-box-{SINGBOX_VERSION}-linux-{arch_str}.tar.gz")
     await _download(url, tmp)
     import tarfile
+    import shutil as _sh
+    # نسخه‌ی قبلی را پاک کن تا فایل‌های قدیمی باقی نمانند
+    for old in d.rglob("sing-box*"):
+        try:
+            if old.is_file():
+                old.unlink()
+            elif old.is_dir():
+                _sh.rmtree(old)
+        except Exception:
+            pass
     with tarfile.open(tmp, "r:gz") as t:
         t.extractall(d)
     # باینری داخل پوشه‌ی sing-box-<ver>/
@@ -138,6 +148,12 @@ async def install(name: str) -> Path:
 
 async def ensure_installed(name: str) -> Path:
     if is_installed(name):
+        # نسخه‌ی نصب‌شده باید با پین بخواند (مخصوصاً sing-box — نسخه‌های جدید
+        # پروتکل‌هایی مثل hysteria1 را حذف کرده‌اند)
+        ver = await get_version(name) or ""
+        if name == "singbox" and SINGBOX_VERSION not in ver:
+            logger.info(f"core_manager: sing-box نصب‌شده ({ver[:40]}) با پین {SINGBOX_VERSION} فرق دارد — نصب مجدد")
+            return await install(name)
         return _bin_path(name)
     return await install(name)
 
