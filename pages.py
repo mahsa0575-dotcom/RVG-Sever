@@ -1519,6 +1519,28 @@ a{color:inherit;text-decoration:none}
   background:var(--accent-d);border-radius:10px;padding:10px 13px;line-height:1.7;margin-top:4px}
 .cm-note i{color:var(--accent);font-size:14px;flex-shrink:0;margin-top:1px}
 
+/* ── تب‌های مودال ساخت کانفیگ ── */
+.cm-tabs{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid var(--card-b);flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+.cm-tabs::-webkit-scrollbar{display:none}
+.cm-tab{display:flex;align-items:center;gap:6px;padding:12px 14px;font-size:12px;font-weight:800;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:.15s;user-select:none}
+.cm-tab i{font-size:15px}
+.cm-tab:hover{color:var(--t2)}
+.cm-tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.ctab{display:none;animation:ctabIn .18s ease}
+.ctab.on{display:block}
+@keyframes ctabIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ── dropdown جمع‌وجور (ALPN چندانتخابی) ── */
+.dd-mini{position:relative}
+.dd-mini-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;text-align:right;width:100%}
+.dd-mini-toggle i{color:var(--t3);transition:.15s}
+.dd-mini.open .dd-mini-toggle i{transform:rotate(180deg)}
+.dd-mini-panel{display:none;position:absolute;top:calc(100% + 4px);right:0;left:0;background:var(--card);border:1px solid var(--card-b);border-radius:12px;padding:6px;z-index:60;box-shadow:0 12px 32px rgba(0,0,0,.45)}
+.dd-mini.open .dd-mini-panel{display:block}
+.dd-mini-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;font-size:12px;color:var(--t2);cursor:pointer;font-weight:700}
+.dd-mini-item:hover{background:var(--accent-d)}
+.dd-mini-item input{accent-color:var(--accent);width:15px;height:15px;cursor:pointer}
+
 .cm-footer{display:flex;gap:10px;padding:16px 28px;border-top:1px solid var(--card-b);flex-shrink:0;
   background:var(--card)}
 
@@ -1579,19 +1601,25 @@ a{color:inherit;text-decoration:none}
     <button class="cm-close" onclick="closeModal('modal-create-link')"><i class="ti ti-x"></i></button>
     <div class="cm-head">
       <div class="cm-head-row">
-        <div class="cm-head-icon" id="cm-head-icon"><i class="ti ti-square-rounded-plus"></i></div>
+        <div class="cm-head-icon"><i class="ti ti-square-rounded-plus"></i></div>
         <div>
-          <div class="cm-head-title" id="cm-head-title">ساخت کانفیگ جدید</div>
-          <div class="cm-head-sub" id="cm-head-sub">تنظیمات کامل پروتکل، ترابرد و محدودیت‌ها در یک صفحه</div>
+          <div class="cm-head-title">ساخت کانفیگ جدید</div>
+          <div class="cm-head-sub">پروتکل، ترنسپورت، امنیت و محدودیت‌ها — مرحله‌ای و جمع‌وجور</div>
         </div>
       </div>
     </div>
 
+    <div class="cm-tabs">
+      <div class="cm-tab on" data-ctab="base" onclick="cmShowTab('base')"><i class="ti ti-id-badge"></i> پایه</div>
+      <div class="cm-tab" data-ctab="protocol" onclick="cmShowTab('protocol')"><i class="ti ti-plug-connected"></i> پروتکل</div>
+      <div class="cm-tab" data-ctab="stream" onclick="cmShowTab('stream')"><i class="ti ti-transfer"></i> استریم</div>
+      <div class="cm-tab" data-ctab="security" onclick="cmShowTab('security')"><i class="ti ti-shield-lock"></i> امنیت</div>
+    </div>
+
     <div class="cm-body">
 
-      <!-- اطلاعات پایه -->
-      <div class="cm-section">
-        <div class="cm-section-label"><i class="ti ti-id-badge-2"></i> اطلاعات پایه</div>
+      <!-- ── تب پایه ── -->
+      <div class="ctab on" id="ctab-base">
         <div class="cm-field"><label>نام کانفیگ</label>
           <input class="cm-input" id="nl-label" placeholder="مثلاً: کاربر علی">
         </div>
@@ -1607,198 +1635,6 @@ a{color:inherit;text-decoration:none}
             <input class="cm-input" id="nl-note" placeholder="توضیح کوتاه">
           </div>
         </div>
-      </div>
-
-      <!-- بخش ۱: پایه -->
-      <div class="cm-section">
-        <div class="cm-section-label"><i class="ti ti-plug-connected"></i> پروتکل پایه</div>
-        <div class="cm-dd open" id="dd-base">
-          <div class="cm-dd-trigger" onclick="cmToggleDD('dd-base')">
-            <div class="cm-dd-icon" id="dd-base-icon"><i class="ti ti-bolt"></i></div>
-            <div class="cm-dd-text">
-              <div class="cm-dd-title">پروتکل پایه — <span id="dd-base-current">VLESS</span></div>
-              <div class="cm-dd-desc" id="dd-base-current-desc">سبک، سریع و پرکاربردترین گزینه</div>
-            </div>
-            <i class="ti ti-chevron-down cm-dd-chev"></i>
-          </div>
-          <div class="cm-dd-panel"><div class="cm-dd-panel-inner"><div class="cm-dd-list">
-            <div class="cm-opt sel" data-base="vless" onclick="cmSelectBase('vless',this)">
-              <div class="cm-opt-radio"></div>
-              <div class="cm-opt-icon"><i class="ti ti-bolt"></i></div>
-              <div class="cm-opt-text"><div class="cm-opt-title">VLESS</div><div class="cm-opt-desc">سبک، سریع و پرکاربردترین گزینه</div></div>
-              <span class="cm-opt-tag">پیشنهادی</span>
-            </div>
-            <div class="cm-opt" data-base="trojan" onclick="cmSelectBase('trojan',this)">
-              <div class="cm-opt-radio"></div>
-              <div class="cm-opt-icon"><i class="ti ti-shield-lock"></i></div>
-              <div class="cm-opt-text"><div class="cm-opt-title">Trojan</div><div class="cm-opt-desc">شبیه‌سازی ترافیک HTTPS معمولی</div></div>
-            </div>
-            <div class="cm-opt" data-base="vmess" onclick="cmSelectBase('vmess',this)">
-              <div class="cm-opt-radio"></div>
-              <div class="cm-opt-icon"><i class="ti ti-world"></i></div>
-              <div class="cm-opt-text"><div class="cm-opt-title">VMess</div><div class="cm-opt-desc">پروتکل کلاسیک v2ray با رمزنگاری داخلی AEAD</div></div>
-              <span class="cm-opt-tag" style="background:var(--purple-bg);color:var(--purple-t)">v2ray</span>
-            </div>
-            <div class="cm-opt" data-base="shadowsocks" onclick="cmSelectBase('shadowsocks',this)">
-              <div class="cm-opt-radio"></div>
-              <div class="cm-opt-icon"><i class="ti ti-shield-lock-filled"></i></div>
-              <div class="cm-opt-text"><div class="cm-opt-title">Shadowsocks</div><div class="cm-opt-desc">رمزنگاری AEAD مستقیم، بدون نیاز به TLS خارجی</div></div>
-              <span class="cm-opt-tag" style="background:var(--purple-bg);color:#A78BFA">AEAD</span>
-            </div>
-            <div class="cm-opt" data-base="telproxy" onclick="cmSelectBase('telproxy',this)">
-              <div class="cm-opt-radio"></div>
-              <div class="cm-opt-icon"><i class="ti ti-brand-telegram"></i></div>
-              <div class="cm-opt-text"><div class="cm-opt-title">Telegram Proxy</div><div class="cm-opt-desc">پروکسی MTProto مستقیم روی یک پورت TCP اختصاصی</div></div>
-              <span class="cm-opt-tag" style="background:var(--purple-bg);color:var(--purple-t)">MTProto</span>
-            </div>
-          </div></div></div>
-        </div>
-      </div>
-      
-      <!-- بخش ۱.۵: پورت اختصاصی -->
-      <div class="cm-section">
-        <div class="cm-section-label"><i class="ti ti-plug-connected"></i> پورت اختصاصی</div>
-        <div class="cm-row2">
-          <div class="cm-field" style="margin-bottom:0">
-            <label>پورت سرور</label>
-            <input class="cm-input" id="nl-port" type="number" min="1" max="65535" placeholder="خالی = خودکار / پورت پنل">
-          </div>
-          <div class="cm-field" style="margin-bottom:0">
-            <label>پورت عمومی (پشت پروکسی)</label>
-            <input class="cm-input" id="nl-public-port" type="number" min="1" max="65535" placeholder="خالی = همان پورت سرور">
-          </div>
-        </div>
-        <div class="cm-note" style="margin-top:10px">
-          <i class="ti ti-info-circle"></i>
-          <span>پورت سرور مستقیماً روی همین VPS باز می‌شود (فایروال را چک کنید). پورت عمومی فقط وقتی لازم است که پشت nginx/CDN پورت دیگری به کاربر نشان داده می‌شود.</span>
-        </div>
-      </div>
-
-      <!-- بخش ۲: استریم (ترابرد + فینگرپرینت + ALPN) — فقط برای VLESS/VMess/Trojan -->
-      <div class="cm-section" id="stream-section">
-        <div class="cm-section-label"><i class="ti ti-transfer"></i> استریم</div>
-      
-        <div class="cm-dd" id="dd-transport">
-          <div class="cm-dd-trigger" onclick="cmToggleDD('dd-transport')">
-            <div class="cm-dd-icon" id="dd-transport-icon"><i class="ti ti-link"></i></div>
-            <div class="cm-dd-text">
-              <div class="cm-dd-title">نوع ترابرد — <span id="dd-transport-current">WebSocket</span></div>
-              <div class="cm-dd-desc" id="dd-transport-current-desc">پایدار و سازگار با همه شرایط شبکه</div>
-            </div>
-            <i class="ti ti-chevron-down cm-dd-chev"></i>
-          </div>
-          <div class="cm-dd-panel"><div class="cm-dd-panel-inner"><div class="cm-dd-list">
-            <div class="cm-opt sel" data-t="ws" onclick="cmSelectTransport('ws',this)">
-              <div class="cm-opt-radio"></div>
-              <div class="cm-opt-icon"><i class="ti ti-link"></i></div>
-              <div class="cm-opt-text"><div class="cm-opt-title">WebSocket</div><div class="cm-opt-desc">پایدار و سازگار با همه شرایط شبکه</div></div>
-            </div>
-            <div class="cm-opt" data-t="httpupgrade" onclick="cmSelectTransport('httpupgrade',this)">
-              <div class="cm-opt-radio"></div>
-              <div class="cm-opt-icon"><i class="ti ti-arrows-transfer-up"></i></div>
-              <div class="cm-opt-text"><div class="cm-opt-title">HTTPUpgrade</div><div class="cm-opt-desc">عبور راحت‌تر از CDN و پروکسی‌های HTTP</div></div>
-            </div>
-            <div class="cm-opt" data-t="xhttp-packet-up" onclick="cmSelectTransport('xhttp-packet-up',this)">
-              <div class="cm-opt-radio"></div>
-              <div class="cm-opt-icon"><i class="ti ti-package"></i></div>
-              <div class="cm-opt-text"><div class="cm-opt-title">XHTTP · packet-up</div><div class="cm-opt-desc">سازگاری بالا با CDN و پروکسی‌ها</div></div>
-            </div>
-            <div class="cm-opt" data-t="xhttp-stream-up" onclick="cmSelectTransport('xhttp-stream-up',this)">
-              <div class="cm-opt-radio"></div>
-              <div class="cm-opt-icon"><i class="ti ti-rocket"></i></div>
-              <div class="cm-opt-text"><div class="cm-opt-title">XHTTP · stream-up</div><div class="cm-opt-desc">تاخیر پایین‌تر برای اتصال‌های پرسرعت</div></div>
-            </div>
-          </div></div></div>
-        </div>
-      
-        <div style="height:10px"></div>
-      
-        <div class="stream-sub-label"><i class="ti ti-transfer-vertical"></i> ALPN</div>
-        <div class="alpn-row" id="alpn-pills">
-          <div class="alpn-chip active" data-alpn="h2" onclick="cmToggleAlpn('h2',this)">
-            <span class="alpn-chip-dot"><i class="ti ti-check"></i></span> h2
-          </div>
-          <div class="alpn-chip active" data-alpn="http/1.1" onclick="cmToggleAlpn('http/1.1',this)">
-            <span class="alpn-chip-dot"><i class="ti ti-check"></i></span> http/1.1
-          </div>
-          <div class="alpn-chip" data-alpn="h3" onclick="cmToggleAlpn('h3',this)">
-            <span class="alpn-chip-dot"><i class="ti ti-check"></i></span> h3
-          </div>
-        </div>
-        
-        <div class="stream-sub-label"><i class="ti ti-fingerprint"></i> Fingerprint (TLS Client Hello)</div>
-        <div class="fp-grid" id="fp-pills">
-          <div class="fp-card active" data-fp="chrome" onclick="cmSetFp('chrome',this)">
-            <div class="fp-card-check"><i class="ti ti-check"></i></div>
-            <div class="fp-card-icon"><i class="ti ti-brand-chrome"></i></div>
-            <div class="fp-card-title">Chrome</div>
-          </div>
-          <div class="fp-card" data-fp="firefox" onclick="cmSetFp('firefox',this)">
-            <div class="fp-card-check"><i class="ti ti-check"></i></div>
-            <div class="fp-card-icon"><i class="ti ti-brand-firefox"></i></div>
-            <div class="fp-card-title">Firefox</div>
-          </div>
-          <div class="fp-card" data-fp="ios" onclick="cmSetFp('ios',this)">
-            <div class="fp-card-check"><i class="ti ti-check"></i></div>
-            <div class="fp-card-icon"><i class="ti ti-brand-apple"></i></div>
-            <div class="fp-card-title">iOS / Safari</div>
-          </div>
-        </div>
-        
-        <input type="hidden" id="nl-alpn" value="h2,http/1.1">
-        <input type="hidden" id="nl-fp" value="chrome">
-      
-        <input type="hidden" id="nl-proto" value="vless-ws">
-        <div class="cm-note" style="margin-top:12px" id="transport-note"></div>
-      </div>
-
-      <!-- این سه بخش عمداً خارج از stream-section هستند: وقتی Telegram Proxy یا Shadowsocks
-           انتخاب می‌شود stream-section مخفی می‌شود، اگر این بخش‌ها داخلش می‌ماندند با آن مخفی
-           می‌شدند حتی وقتی display خودشان block/flex تنظیم می‌شد. -->
-      <div class="cm-note" style="margin-top:12px;display:none" id="mtproto-note"></div>
-
-      <div class="cm-section" id="ss-cipher-field" style="display:none;margin-bottom:0">
-        <div class="cm-section-label"><i class="ti ti-key"></i> الگوریتم رمزنگاری</div>
-        <div class="cm-pills">
-          <span class="cm-pill active" data-ss-cipher="chacha20-ietf-poly1305" onclick="cmSetSsCipher('chacha20-ietf-poly1305',this)">ChaCha20-Poly1305</span>
-          <span class="cm-pill" data-ss-cipher="aes-256-gcm" onclick="cmSetSsCipher('aes-256-gcm',this)">AES-256-GCM</span>
-        </div>
-        <input type="hidden" id="nl-ss-cipher" value="chacha20-ietf-poly1305">
-        <div class="stream-sub-label" style="margin-top:12px"><i class="ti ti-transfer"></i> حالت اتصال</div>
-        <div class="cm-pills">
-          <span class="cm-pill active" data-ss-mode="ws" onclick="cmSetSsMode('ws',this)">WebSocket (v2ray-plugin)</span>
-          <span class="cm-pill" data-ss-mode="tcp" onclick="cmSetSsMode('tcp',this)">TCP بومی (پورت اختصاصی)</span>
-        </div>
-        <input type="hidden" id="nl-ss-mode" value="ws">
-        <div class="cm-note" style="margin-top:10px">
-          <i class="ti ti-info-circle"></i>
-          <span>پسورد به‌صورت خودکار و امن ساخته می‌شود؛ لینک <b>ss://</b> بعد از ساخت کانفیگ در دسترس است. حالت TCP بومی حتماً پورت اختصاصی می‌گیرد.</span>
-        </div>
-      </div>
-
-      <div class="cm-section" id="mtproto-port-field" style="display:none;margin-bottom:0">
-        <div class="cm-row2">
-          <div class="cm-field" style="margin-bottom:0">
-            <label><i class="ti ti-server-2" style="color:var(--accent);margin-left:4px"></i>Fake TLS SNI</label>
-            <input class="cm-input" id="nl-mtproto-domain" type="text" placeholder="www.cloudflare.com" oninput="cmClearSniPills()">
-          </div>
-        </div>
-        <div class="cm-pills" style="margin-top:-4px;margin-bottom:10px">
-          <span class="cm-pill active" onclick="cmSetSni('www.cloudflare.com',this)"><i class="ti ti-brand-cloudflare" style="margin-left:3px"></i>www.cloudflare.com</span>
-          <span class="cm-pill" onclick="cmSetSni('www.google.com',this)">www.google.com</span>
-          <span class="cm-pill" onclick="cmSetSni('www.microsoft.com',this)">www.microsoft.com</span>
-          <span class="cm-pill" onclick="cmSetSni('www.amazon.com',this)">www.amazon.com</span>
-        </div>
-        <div class="cm-note" style="margin-top:0">
-          <i class="ti ti-info-circle"></i>
-          <span>پورت پروکسی تلگرام از فیلد «پورت اختصاصی» بالا گرفته می‌شود (خالی = خودکار).</span>
-        </div>
-      </div>
-
-
-      <!-- محدودیت‌ها -->
-      <div class="cm-section">
-        <div class="cm-section-label"><i class="ti ti-adjustments"></i> محدودیت‌ها</div>
         <div class="cm-field">
           <label>سهمیه ترافیک</label>
           <div class="cm-row2">
@@ -1814,7 +1650,7 @@ a{color:inherit;text-decoration:none}
             <span class="cm-pill" onclick="cmQuota(50,'GB',this)">۵۰GB</span>
           </div>
         </div>
-        <div class="cm-field" style="margin-bottom:4px">
+        <div class="cm-field">
           <label>انقضا</label>
           <input class="cm-input" id="nl-exp" type="number" min="0" step="1" placeholder="روز · 0 = نامحدود">
           <div class="cm-pills">
@@ -1824,13 +1660,162 @@ a{color:inherit;text-decoration:none}
             <span class="cm-pill" onclick="cmExpiry(90,this)">۹۰ روز</span>
           </div>
         </div>
+        <div class="cm-row2">
+          <div class="cm-field"><label><i class="ti ti-plug-connected" style="color:var(--accent);margin-left:4px"></i>پورت سرور</label>
+            <input class="cm-input" id="nl-port" type="number" min="1" max="65535" placeholder="خالی = خودکار / پورت پنل">
+          </div>
+          <div class="cm-field"><label><i class="ti ti-arrows-exchange" style="color:var(--accent);margin-left:4px"></i>پورت عمومی</label>
+            <input class="cm-input" id="nl-public-port" type="number" min="1" max="65535" placeholder="خالی = همان پورت">
+          </div>
+        </div>
+        <div class="cm-note"><i class="ti ti-info-circle"></i><span>پورت سرور مستقیماً روی VPS باز می‌شود (فایروال را چک کنید). پورت عمومی فقط برای پشت nginx/CDN است.</span></div>
+      </div>
+
+      <!-- ── تب پروتکل ── -->
+      <div class="ctab" id="ctab-protocol">
+        <div class="cm-field">
+          <label>پروتکل</label>
+          <select class="cm-input" id="nl-base" onchange="cmBaseChange()">
+            <option value="vless">VLESS — سبک، سریع و پرکاربرد</option>
+            <option value="vmess">VMess — کلاسیک v2ray با رمزنگاری داخلی</option>
+            <option value="trojan">Trojan — شبیه‌سازی ترافیک HTTPS</option>
+            <option value="shadowsocks">Shadowsocks — رمزنگاری AEAD</option>
+            <option value="telproxy">Telegram Proxy — MTProto</option>
+          </select>
+        </div>
+
+        <div id="cm-ss-panel" style="display:none">
+          <div class="cm-field"><label>الگوریتم رمزنگاری</label>
+            <select class="cm-input" id="nl-ss-cipher">
+              <option value="chacha20-ietf-poly1305">ChaCha20-Poly1305 (پیشنهادی)</option>
+              <option value="aes-256-gcm">AES-256-GCM</option>
+            </select>
+          </div>
+          <div class="cm-field"><label>حالت اتصال</label>
+            <select class="cm-input" id="nl-ss-mode" onchange="cmBaseChange()">
+              <option value="ws">WebSocket (v2ray-plugin)</option>
+              <option value="tcp">TCP بومی (پورت اختصاصی)</option>
+            </select>
+          </div>
+          <div class="cm-note"><i class="ti ti-info-circle"></i><span>پسورد به‌صورت خودکار و امن ساخته می‌شود؛ حالت TCP حتماً پورت اختصاصی می‌گیرد.</span></div>
+        </div>
+
+        <div id="cm-mt-panel" style="display:none">
+          <div class="cm-field"><label><i class="ti ti-server-2" style="color:var(--accent);margin-left:4px"></i>Fake TLS SNI</label>
+            <input class="cm-input" id="nl-mtproto-domain" type="text" placeholder="www.cloudflare.com" oninput="cmClearSniPills()">
+          </div>
+          <div class="cm-pills">
+            <span class="cm-pill active" onclick="cmSetSni('www.cloudflare.com',this)"><i class="ti ti-brand-cloudflare" style="margin-left:3px"></i>www.cloudflare.com</span>
+            <span class="cm-pill" onclick="cmSetSni('www.google.com',this)">www.google.com</span>
+            <span class="cm-pill" onclick="cmSetSni('www.microsoft.com',this)">www.microsoft.com</span>
+            <span class="cm-pill" onclick="cmSetSni('www.amazon.com',this)">www.amazon.com</span>
+          </div>
+          <div class="cm-note"><i class="ti ti-info-circle"></i><span>پورت پروکسی تلگرام از فیلد «پورت سرور» در تب پایه گرفته می‌شود (خالی = خودکار).</span></div>
+        </div>
+
+        <div id="cm-vmess-note" style="display:none" class="cm-note"><i class="ti ti-info-circle"></i><span>رمزنگاری داخلی VMess به‌صورت خودکار AEAD (aes-128-gcm / chacha20-poly1305) انتخاب می‌شود.</span></div>
+      </div>
+
+      <!-- ── تب استریم ── -->
+      <div class="ctab" id="ctab-stream">
+        <div class="cm-field">
+          <label>ترنسپورت</label>
+          <select class="cm-input" id="nl-transport" onchange="cmTransportChange()">
+            <option value="ws">WebSocket — پایدار و سازگار</option>
+            <option value="httpupgrade">HTTPUpgrade — عبور راحت‌تر از CDN</option>
+            <option value="xhttp-packet-up">XHTTP · packet-up — سازگاری بالا با CDN</option>
+            <option value="xhttp-stream-up">XHTTP · stream-up — تاخیر پایین‌تر</option>
+            <option value="tcp" style="display:none">TCP خام (فقط VMess)</option>
+          </select>
+        </div>
+        <div class="cm-field">
+          <label>ALPN</label>
+          <div class="dd-mini" id="dd-alpn">
+            <button type="button" class="cm-input dd-mini-toggle" onclick="cmToggleDD('dd-alpn')">
+              <span id="dd-alpn-label">h2, http/1.1</span>
+              <i class="ti ti-chevron-down"></i>
+            </button>
+            <div class="dd-mini-panel" id="dd-alpn-panel">
+              <label class="dd-mini-item"><input type="checkbox" value="h2" checked onchange="cmAlpnChange()"> h2</label>
+              <label class="dd-mini-item"><input type="checkbox" value="http/1.1" checked onchange="cmAlpnChange()"> http/1.1</label>
+              <label class="dd-mini-item"><input type="checkbox" value="h3" onchange="cmAlpnChange()"> h3</label>
+            </div>
+          </div>
+          <input type="hidden" id="nl-alpn" value="h2,http/1.1">
+        </div>
+        <div class="cm-field">
+          <label>Fingerprint (TLS Client Hello)</label>
+          <select class="cm-input" id="nl-fp">
+            <option value="chrome">Chrome (پیشنهادی)</option>
+            <option value="firefox">Firefox</option>
+            <option value="safari">Safari</option>
+            <option value="ios">iOS</option>
+            <option value="android">Android</option>
+            <option value="edge">Edge</option>
+            <option value="360">360 Browser</option>
+            <option value="qq">QQ Browser</option>
+            <option value="random">Random</option>
+          </select>
+        </div>
+        <div class="cl amber" id="stream-unavailable" style="display:none"><i class="ti ti-info-circle"></i><span>این پروتکل ترنسپورت و فینگرپرینت جداگانه ندارد — تنظیمات این تب نادیده گرفته می‌شود.</span></div>
+        <input type="hidden" id="nl-proto" value="vless-ws">
+      </div>
+
+      <!-- ── تب امنیت ── -->
+      <div class="ctab" id="ctab-security">
+        <div class="cm-pills" id="sec-pills">
+          <span class="cm-pill active" data-sec="" onclick="cmSetSecurity('',this)">پیش‌فرض سرور</span>
+          <span class="cm-pill" data-sec="tls" onclick="cmSetSecurity('tls',this)">TLS</span>
+          <span class="cm-pill" data-sec="reality" onclick="cmSetSecurity('reality',this)">Reality</span>
+        </div>
+
+        <div id="cm-sec-none-note" class="cm-note" style="margin-top:12px">
+          <i class="ti ti-info-circle"></i>
+          <span>امنیت از تنظیمات سرور پیروی می‌کند (الان: <b id="sec-cur-mode">بدون TLS</b>). برای TLS اختصاصی هر کانفیگ، گزینه‌ی TLS را انتخاب کنید.</span>
+        </div>
+
+        <div id="cm-tls-panel" style="display:none">
+          <div class="cm-field"><label>SNI (اختیاری)</label>
+            <input class="cm-input" id="nl-sec-sni" placeholder="خالی = دامنه‌ی سرور">
+          </div>
+          <div class="cm-note"><i class="ti ti-info-circle"></i><span>TLS سمت سرور باید واقعاً فعال باشد (پشت nginx/caddy با گواهی، یا کلید «لینک‌ها با TLS» در تنظیمات).</span></div>
+        </div>
+
+        <div id="cm-reality-panel" style="display:none">
+          <div class="cm-field"><label>SNI / Dest</label>
+            <input class="cm-input" id="nl-reality-dest" dir="ltr" placeholder="www.cloudflare.com">
+          </div>
+          <div class="cm-row2">
+            <div class="cm-field"><label>کلید خصوصی (Private Key)</label>
+              <input class="cm-input" id="nl-reality-priv" dir="ltr" placeholder="خالی = خودکار">
+            </div>
+            <div class="cm-field" style="align-self:end;flex:0 0 auto">
+              <button type="button" class="btn btn-g btn-sm" onclick="cmGenReality()"><i class="ti ti-wand"></i> تولید کلیدها</button>
+            </div>
+          </div>
+          <div class="cm-field"><label>کلید عمومی (Public Key — pbk)</label>
+            <input class="cm-input" id="nl-reality-pub" dir="ltr" placeholder="خودکار از کلید خصوصی">
+          </div>
+          <div class="cm-row2">
+            <div class="cm-field"><label>Short ID (sid)</label>
+              <input class="cm-input" id="nl-reality-sid" dir="ltr" placeholder="خالی = خودکار">
+            </div>
+            <div class="cm-field" style="align-self:end;flex:0 0 auto">
+              <button type="button" class="btn btn-o btn-sm" onclick="cmGenSid()"><i class="ti ti-refresh"></i> تولید</button>
+            </div>
+          </div>
+          <div class="cl amber" style="margin-top:10px"><i class="ti ti-alert-triangle"></i><span>کلیدها با فرمت استاندارد Xray (X25519) تولید و در لینک قرار می‌گیرند. توجه: ریلی سمت سرور این پنل هنوز Reality را terminate نمی‌کند (نیازمند هسته Xray — به‌زودی)؛ برای فعال‌بودن کامل، این کانفیگ را روی یک بک‌اند Xray واقعی همانند‌سازی کنید.</span></div>
+        </div>
+
+        <div id="cm-sec-na" class="cl amber" style="display:none;margin-top:10px"><i class="ti ti-info-circle"></i><span>امنیت TLS/Reality فقط برای VLESS، VMess و Trojan معنا دارد.</span></div>
       </div>
 
     </div>
 
     <div class="cm-footer">
       <button class="cm-btn-cancel" onclick="closeModal('modal-create-link')">انصراف</button>
-      <button class="cm-btn-submit" id="cm-submit-btn" onclick="createLink()"><i class="ti ti-link-plus" id="cm-submit-icon"></i> <span id="cm-submit-text">ساخت کانفیگ</span></button>    </div>
+      <button class="cm-btn-submit" id="cm-submit-btn" onclick="createLink()"><i class="ti ti-link-plus" id="cm-submit-icon"></i> <span id="cm-submit-text">ساخت کانفیگ</span></button>
+    </div>
   </div>
 </div>
 
@@ -2341,6 +2326,17 @@ a{color:inherit;text-decoration:none}
         <div class="modal-v2-field" style="flex:1"><label><i class="ti ti-plug-connected"></i> پورت سرور (0 = پورت پنل)</label><input class="modal-v2-input" id="el-port" type="number" min="0" max="65535"></div>
         <div class="modal-v2-field" style="flex:1"><label><i class="ti ti-arrows-exchange"></i> پورت عمومی (0 = همان)</label><input class="modal-v2-input" id="el-pport" type="number" min="0" max="65535"></div>
       </div>
+      <div class="form-row" style="display:flex;gap:10px">
+        <div class="modal-v2-field" style="flex:1"><label><i class="ti ti-shield-lock"></i> امنیت</label>
+          <select class="modal-v2-input" id="el-security">
+            <option value="">پیش‌فرض سرور</option>
+            <option value="none">بدون رمز (none)</option>
+            <option value="tls">TLS</option>
+            <option value="reality">Reality</option>
+          </select>
+        </div>
+        <div class="modal-v2-field" style="flex:1"><label><i class="ti ti-server-2"></i> SNI (اختیاری)</label><input class="modal-v2-input" id="el-sni" placeholder="خالی = دامنه‌ی سرور"></div>
+      </div>
       <div class="modal-v2-field" style="margin-bottom:0"><label><i class="ti ti-note"></i> یادداشت</label><input class="modal-v2-input" id="el-note"></div>
       <div class="modal-v2-hint" style="margin-top:11px"><i class="ti ti-info-circle"></i><span>برای حفظ انقضای فعلی، فیلد انقضا را صفر بگذارید.</span></div>
       <div class="modal-v2-footer">
@@ -2517,7 +2513,7 @@ a{color:inherit;text-decoration:none}
 <section class="pg" id="pg-links">
   <div class="topbar">
     <div class="links-toolbar-actions">
-      <button class="btn btn-p" onclick="openModal('modal-create-link')">
+      <button class="btn btn-p" onclick="openCreateModal()">
         <i class="ti ti-square-rounded-plus"></i> <span>ساخت کانفیگ جدید</span>
       </button>
       <button class="btn btn-g" onclick="bulkCreateGroup('video')" id="bulk-video-btn">
@@ -3310,6 +3306,7 @@ async function loadLinks(){
         ${isMt && l.mtproto_port ? `<span class="cfg-sub-tag"><i class="ti ti-route"></i> پورت ${l.mtproto_port}</span>` : ''}
         ${!isMt && l.listen_port ? `<span class="cfg-sub-tag"><i class="ti ti-route"></i> پورت ${l.listen_port}${(l.port_status && l.port_status!=='running')?' · خطا':''}</span>` : ''}
         ${!isMt && l.public_port ? `<span class="cfg-sub-tag"><i class="ti ti-arrows-exchange"></i> عمومی: ${l.public_port}</span>` : ''}
+        ${l.security==='reality' ? `<span class="cfg-sub-tag" style="background:linear-gradient(135deg,rgba(139,92,246,.18),rgba(109,72,214,.12));color:#A78BFA"><i class="ti ti-shield-star"></i> Reality</span>` : (l.security==='tls' ? `<span class="cfg-sub-tag"><i class="ti ti-lock"></i> TLS</span>` : '')}
         ${l.sub_id&&allSubsList.find(s=>s.sub_id===l.sub_id)?`<span class="cfg-sub-tag"><i class="ti ti-folder"></i> ${esc(allSubsList.find(s=>s.sub_id===l.sub_id).name)}</span>`:''}
       </div>
       <div class="cfg-divider-v"></div>
@@ -3396,140 +3393,106 @@ function qcTab(name, el){
   document.getElementById('qc-pane-'+name).classList.add('active');
 }
 
-let cmBase = 'vless', cmTransport = 'ws';
+let cmBase = 'vless', cmTransport = 'ws', cmSecurity = '';
 
-function cmToggleDD(id){
-  const el = document.getElementById(id);
-  const isOpen = el.classList.contains('open');
-  document.querySelectorAll('.cm-dd').forEach(d => d.classList.remove('open'));
-  if(!isOpen) el.classList.add('open');
+/* ── تب‌ها ── */
+function cmShowTab(name){
+  document.querySelectorAll('#modal-create-link .cm-tab').forEach(t=>t.classList.toggle('on', t.dataset.ctab===name));
+  document.querySelectorAll('#modal-create-link .ctab').forEach(c=>c.classList.toggle('on', c.id==='ctab-'+name));
+}
+function openCreateModal(){
+  cmShowTab('base');
+  openModal('modal-create-link');
 }
 
-const BASE_INFO = {
-  vless:    { icon:'ti-bolt',           title:'VLESS',          desc:'سبک، سریع و پرکاربردترین گزینه' },
-  vmess:    { icon:'ti-world',          title:'VMess',          desc:'پروتکل کلاسیک v2ray با رمزنگاری داخلی' },
-  trojan:   { icon:'ti-shield-lock',    title:'Trojan',         desc:'شبیه‌سازی ترافیک HTTPS معمولی' },
-  shadowsocks: { icon:'ti-shield-lock-filled', title:'Shadowsocks', desc:'رمزنگاری AEAD مستقیم، بدون نیاز به TLS خارجی' },
-  telproxy: { icon:'ti-brand-telegram', title:'Telegram Proxy', desc:'پروکسی MTProto مستقیم روی یک پورت TCP اختصاصی' },
-};
-const TRANSPORT_INFO = {
-  'ws':               { icon:'ti-link',    title:'WebSocket',            desc:'پایدار و سازگار با همه شرایط شبکه' },
-  'httpupgrade':      { icon:'ti-arrows-transfer-up', title:'HTTPUpgrade', desc:'عبور راحت‌تر از CDN و پروکسی‌های HTTP' },
-  'xhttp-packet-up':  { icon:'ti-package', title:'XHTTP · packet-up',    desc:'سازگاری بالا با CDN و پروکسی‌ها' },
-  'xhttp-stream-up':  { icon:'ti-rocket',  title:'XHTTP · stream-up',    desc:'تاخیر پایین‌تر برای اتصال‌های پرسرعت' }
-};
-
-function cmSelectBase(val, el){
-  cmBase = val;
-  document.querySelectorAll('#dd-base .cm-opt').forEach(o => o.classList.remove('sel'));
-  el.classList.add('sel');
-  const info = BASE_INFO[val];
-  document.getElementById('dd-base-icon').innerHTML = `<i class="ti ${info.icon}"></i>`;
-  document.getElementById('dd-base-current').textContent = info.title;
-  document.getElementById('dd-base-current-desc').textContent = info.desc;
-  cmToggleDD('dd-base');
-
-  // ریست ترابرد به WS هر بار که پروتکل پایه عوض می‌شه (جلوگیری از state قدیمی)
-  cmTransport = 'ws';
-  document.querySelectorAll('#dd-transport .cm-opt').forEach(o => o.classList.remove('sel'));
-  document.querySelector('#dd-transport .cm-opt[data-t="ws"]')?.classList.add('sel');
-  const wsInfo = TRANSPORT_INFO['ws'];
-  document.getElementById('dd-transport-icon').innerHTML = `<i class="ti ${wsInfo.icon}"></i>`;
-  document.getElementById('dd-transport-current').textContent = wsInfo.title;
-  document.getElementById('dd-transport-current-desc').textContent = wsInfo.desc;
-
-
-  const streamSection = document.getElementById('stream-section');
-  const normalNote = document.getElementById('transport-note');
-  const mtNote = document.getElementById('mtproto-note');
-  const portField = document.getElementById('mtproto-port-field');
-  const ssField = document.getElementById('ss-cipher-field');
-
-  // VMess فقط WS/HTTPUpgrade دارد — گزینه‌های XHTTP مخفی می‌شوند
-  document.querySelectorAll('#dd-transport .cm-opt').forEach(o => {
-    if ((o.dataset.t || '').startsWith('xhttp')) o.style.display = (val === 'vmess') ? 'none' : '';
-  });
-
-  if (val === 'vmess') {
-    streamSection.style.display = '';
-    normalNote.style.display = 'flex';
-    mtNote.style.display = 'none';
-    portField.style.display = 'none';
-    if (ssField) ssField.style.display = 'none';
-    document.getElementById('cm-head-title').textContent = 'ساخت کانفیگ VMess';
-    document.getElementById('cm-head-sub').textContent = 'رمزنگاری AEAD داخلی (aes-128-gcm / chacha20-poly1305)';
-    document.getElementById('cm-submit-text').textContent = 'ساخت کانفیگ';
-    document.getElementById('cm-head-icon').innerHTML = '<i class="ti ti-world"></i>';
-  } else if (val === 'telproxy') {
-    streamSection.style.display = 'none';
-    normalNote.style.display = 'none';
-    mtNote.style.display = 'flex';
-    portField.style.display = 'block';
-    if (ssField) ssField.style.display = 'none';
-    document.getElementById('cm-head-title').textContent = 'ساخت پروکسی جدید';
-    document.getElementById('cm-head-sub').textContent = 'ساخت پروکسی تلگرام (MTProto) با پورت TCP اختصاصی';
-    document.getElementById('cm-submit-text').textContent = 'ساخت پروکسی';
-    document.getElementById('cm-head-icon').innerHTML = '<i class="ti ti-brand-telegram"></i>';
-  } else if (val === 'shadowsocks') {
-    // Shadowsocks فقط یک حالت واقعی داره (SIP002 + plugin=v2ray-plugin برای WS+TLS)؛
-    // xhttp روی هیچ کلاینت رایجی (v2rayN, NekoBox, ...) برای SS پشتیبانی نمیشه،
-    // پس منوی transport اصلاً نشون داده نمیشه تا کاربر نتونه کانفیگ خراب بسازه.
-    cmTransport = 'ws';
-    streamSection.style.display = 'none';
-    normalNote.style.display = 'flex';
-    mtNote.style.display = 'none';
-    portField.style.display = 'none';
-    if (ssField) ssField.style.display = 'block';
-    document.getElementById('cm-head-title').textContent = 'ساخت کانفیگ Shadowsocks';
-    document.getElementById('cm-head-sub').textContent = 'رمزنگاری AEAD، پسورد به‌صورت خودکار ساخته می‌شود';
-    document.getElementById('cm-submit-text').textContent = 'ساخت کانفیگ';
-    document.getElementById('cm-head-icon').innerHTML = '<i class="ti ti-shield-lock-filled"></i>';
-  } else {
-    streamSection.style.display = '';
-    normalNote.style.display = 'flex';
-    mtNote.style.display = 'none';
-    portField.style.display = 'none';
-    if (ssField) ssField.style.display = 'none';
-    document.getElementById('cm-head-title').textContent = 'ساخت کانفیگ جدید';
-    document.getElementById('cm-head-sub').textContent = 'تنظیمات کامل پروتکل، ترابرد و محدودیت‌ها در یک صفحه';
-    document.getElementById('cm-submit-text').textContent = 'ساخت کانفیگ';
-    document.getElementById('cm-head-icon').innerHTML = '<i class="ti ti-square-rounded-plus"></i>';
-  }
+/* ── پروتکل و وابستگی‌ها ── */
+function cmBaseChange(){
+  cmBase = document.getElementById('nl-base').value;
+  document.getElementById('cm-ss-panel').style.display = cmBase==='shadowsocks' ? '' : 'none';
+  document.getElementById('cm-mt-panel').style.display = cmBase==='telproxy' ? '' : 'none';
+  document.getElementById('cm-vmess-note').style.display = cmBase==='vmess' ? '' : 'none';
+  const tcpOpt = document.querySelector('#nl-transport option[value="tcp"]');
+  if (tcpOpt) tcpOpt.style.display = cmBase==='vmess' ? '' : 'none';
+  const tr = document.getElementById('nl-transport').value;
+  const validTr = cmBase==='vmess' ? ['ws','httpupgrade','tcp'] : ['ws','httpupgrade','xhttp-packet-up','xhttp-stream-up'];
+  if (!validTr.includes(tr)) document.getElementById('nl-transport').value = 'ws';
+  // Reality فقط برای VLESS/Trojan؛ TLS برای VLESS/VMess/Trojan
+  const secNa = !(cmBase==='vless' || cmBase==='trojan' || cmBase==='vmess');
+  document.getElementById('cm-sec-na').style.display = secNa ? '' : 'none';
+  const realityPill = document.querySelector('#sec-pills [data-sec="reality"]');
+  if (realityPill) realityPill.style.display = (cmBase==='vless'||cmBase==='trojan') ? '' : 'none';
+  if (cmSecurity==='reality' && !(cmBase==='vless'||cmBase==='trojan')) cmSetSecurity('', null);
+  // استریم بی‌معنا برای SS/Telproxy
+  const na = (cmBase==='shadowsocks' || cmBase==='telproxy');
+  document.getElementById('stream-unavailable').style.display = na ? '' : 'none';
+  document.getElementById('nl-transport').disabled = na;
+  document.getElementById('nl-fp').disabled = na;
   cmApplyProto();
 }
-function cmSelectTransport(val, el){
-  cmTransport = val;
-  document.querySelectorAll('#dd-transport .cm-opt').forEach(o => o.classList.remove('sel'));
-  el.classList.add('sel');
-  const info = TRANSPORT_INFO[val];
-  document.getElementById('dd-transport-icon').innerHTML = `<i class="ti ${info.icon}"></i>`;
-  document.getElementById('dd-transport-current').textContent = info.title;
-  document.getElementById('dd-transport-current-desc').textContent = info.desc;
-  cmToggleDD('dd-transport');
-  cmApplyProto();
-}
+function cmTransportChange(){ cmTransport = document.getElementById('nl-transport').value; cmApplyProto(); }
+
+function setProto(v){ document.getElementById('nl-proto').value = v; }
 function cmApplyProto(){
-  if (cmBase === 'telproxy') {
-    document.getElementById('nl-proto').value = 'mtproto';
+  if (cmBase==='telproxy'){ setProto('mtproto'); return; }
+  if (cmBase==='shadowsocks'){
+    setProto(document.getElementById('nl-ss-mode').value==='tcp' ? 'shadowsocks-tcp' : 'shadowsocks');
     return;
   }
-  if (cmBase === 'vmess') {
-    const val = cmTransport === 'httpupgrade' ? 'vmess-httpupgrade' : 'vmess-ws';
-    document.getElementById('nl-proto').value = val;
+  const tr = document.getElementById('nl-transport').value;
+  if (cmBase==='vmess'){
+    setProto(tr==='tcp' ? 'vmess-tcp' : (tr==='httpupgrade' ? 'vmess-httpupgrade' : 'vmess-ws'));
     return;
   }
-  if (cmBase === 'shadowsocks') {
-    const val = cmTransport === 'ws' ? 'shadowsocks' : `shadowsocks-${cmTransport}`;
-    document.getElementById('nl-proto').value = val;
+  if (cmBase==='trojan'){
+    setProto(tr==='httpupgrade' ? 'trojan-httpupgrade' : (tr.indexOf('xhttp')===0 ? 'trojan-'+tr : 'trojan-ws'));
     return;
   }
-  const val = cmTransport === 'ws'
-    ? (cmBase === 'trojan' ? 'trojan-ws' : 'vless-ws')
-    : (cmBase === 'trojan' ? `trojan-${cmTransport}` : cmTransport);
-  document.getElementById('nl-proto').value = val;
+  setProto(tr==='httpupgrade' ? 'vless-httpupgrade' : (tr.indexOf('xhttp')===0 ? tr : 'vless-ws'));
 }
 
-/* ── سهمیه ترافیک و انقضا: هم با پیل، هم با تایپ مستقیم قابل تنظیم‌اند ── */
+/* ── امنیت ── */
+function cmSetSecurity(sec, el){
+  cmSecurity = sec || '';
+  document.querySelectorAll('#sec-pills .cm-pill').forEach(p=>p.classList.toggle('active', p.dataset.sec===cmSecurity));
+  document.getElementById('cm-tls-panel').style.display = cmSecurity==='tls' ? '' : 'none';
+  document.getElementById('cm-reality-panel').style.display = cmSecurity==='reality' ? '' : 'none';
+  document.getElementById('cm-sec-none-note').style.display = cmSecurity ? 'none' : '';
+  if (el) {
+    el.parentElement.querySelectorAll('.cm-pill').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active');
+  }
+}
+async function cmGenReality(){
+  try{
+    const r = await authF('/api/reality/gen', {method:'POST'});
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.detail||'خطا');
+    document.getElementById('nl-reality-priv').value = d.private_key;
+    document.getElementById('nl-reality-pub').value = d.public_key;
+    if(!document.getElementById('nl-reality-sid').value) document.getElementById('nl-reality-sid').value = d.short_id;
+    if(!document.getElementById('nl-reality-dest').value) document.getElementById('nl-reality-dest').value = 'www.cloudflare.com';
+    toast('کلیدهای Reality ساخته شد ✓','ok');
+  }catch(e){ toast('✗ '+(e.message||'خطا در تولید کلید'),'err'); }
+}
+function cmGenSid(){
+  const hex='0123456789abcdef'; let s='';
+  for(let i=0;i<8;i++) s+=hex[Math.floor(Math.random()*16)];
+  document.getElementById('nl-reality-sid').value = s;
+}
+
+/* ── ALPN dropdown چندانتخابی ── */
+function cmToggleDD(id){ document.getElementById(id).classList.toggle('open'); }
+function cmAlpnChange(ev){
+  const vals = Array.from(document.querySelectorAll('#dd-alpn-panel input:checked')).map(i=>i.value);
+  if (!vals.length){ ev.target.checked = true; return; }
+  document.getElementById('nl-alpn').value = vals.join(',');
+  document.getElementById('dd-alpn-label').textContent = vals.join(', ');
+}
+document.addEventListener('click', function(ev){
+  document.querySelectorAll('.dd-mini.open').forEach(function(d){ if(!d.contains(ev.target)) d.classList.remove('open'); });
+});
+
+/* ── سهمیه/انقضا/SNI ── */
 function cmQuota(val, unit, el){
   document.getElementById('nl-val').value = val === 0 ? '' : val;
   document.getElementById('nl-unit').value = unit;
@@ -3541,59 +3504,15 @@ function cmExpiry(days, el){
   el.parentElement.querySelectorAll('.cm-pill').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
 }
-
 function cmSetSni(domain, el){
   document.getElementById('nl-mtproto-domain').value = domain;
   el.parentElement.querySelectorAll('.cm-pill').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
 }
 function cmClearSniPills(){
-  const wrap = document.getElementById('nl-mtproto-domain').closest('.cm-section').querySelector('.cm-pills');
+  const wrap = document.getElementById('nl-mtproto-domain').closest('.cm-field').parentElement;
   wrap?.querySelectorAll('.cm-pill').forEach(c => c.classList.remove('active'));
 }
-
-/* ── ALPN: چندانتخابی ── */
-let cmAlpn = ['h2', 'http/1.1'];
-function cmToggleAlpn(val, el){
-  const idx = cmAlpn.indexOf(val);
-  if(idx > -1){
-    if(cmAlpn.length === 1) return; // حداقل یک ALPN باید بمونه
-    cmAlpn.splice(idx, 1);
-    el.classList.remove('active');
-  } else {
-    cmAlpn.push(val);
-    el.classList.add('active');
-  }
-  document.getElementById('nl-alpn').value = cmAlpn.join(',');
-}
-
-
-function cmSetSsMode(val, el){
-  document.getElementById('nl-ss-mode').value = val;
-  el.parentElement.querySelectorAll('.cm-pill').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-}
-function cmSetSsCipher(val, el){
-  document.getElementById('nl-ss-cipher').value = val;
-  el.parentElement.querySelectorAll('.cm-pill').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-}
-
-function cmSetFp(val, el){
-  document.getElementById('nl-fp').value = val;
-  document.querySelectorAll('#fp-pills .fp-card').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-}
-document.getElementById('nl-val')?.addEventListener('input', () => {
-  document.querySelectorAll('#nl-val').forEach(()=>{});
-  const wrap = document.getElementById('nl-val').closest('.cm-field').querySelector('.cm-pills');
-  wrap?.querySelectorAll('.cm-pill').forEach(c => c.classList.remove('active'));
-});
-document.getElementById('nl-exp')?.addEventListener('input', () => {
-  const wrap = document.getElementById('nl-exp').closest('.cm-field').querySelector('.cm-pills');
-  wrap?.querySelectorAll('.cm-pill').forEach(c => c.classList.remove('active'));
-});
-
 function onNlTargetChange(){
   const targetEl=document.getElementById('nl-target');
   const nodeId=targetEl?targetEl.value:'';
@@ -3607,6 +3526,8 @@ function onNlTargetChange(){
   }
   document.getElementById('nl-sub-wrap').style.display='';
 }
+
+/* ── ساخت کانفیگ ── */
 async function createLink(){
   const label=document.getElementById('nl-label').value.trim()||'کانفیگ جدید';
   const val=document.getElementById('nl-val').value;
@@ -3616,29 +3537,33 @@ async function createLink(){
   const targetEl=document.getElementById('nl-target');
   const nodeId=targetEl?targetEl.value:'';
   const sub_id=document.getElementById('nl-sub').value||null;
-  let protocol=document.getElementById('nl-proto').value||'vless-ws';
+  const protocol=document.getElementById('nl-proto').value||'vless-ws';
   const isMt = protocol === 'mtproto';
-  const isSs = protocol.startsWith('shadowsocks');
-  // حالت اتصال Shadowsocks: ws یا tcp بومی
-  if (isSs) {
-    const ssMode = document.getElementById('nl-ss-mode').value || 'ws';
-    if (ssMode === 'tcp') protocol = 'shadowsocks-tcp';
-  }
+  const isSs = protocol.indexOf('shadowsocks')===0;
   const listen_port = document.getElementById('nl-port').value || null;
   const public_port = document.getElementById('nl-public-port').value || null;
   const mtproto_domain = isMt ? (document.getElementById('nl-mtproto-domain').value.trim() || null) : null;
-  const alpn = (isMt || isSs) ? null : (document.getElementById('nl-alpn').value || 'h2,http/1.1');
-  const fingerprint = (isMt || isSs) ? null : (document.getElementById('nl-fp').value || 'chrome');
+  const isVmessLike = !(isMt || isSs);
+  const alpn = isVmessLike ? (document.getElementById('nl-alpn').value || 'h2,http/1.1') : null;
+  const fingerprint = isVmessLike ? (document.getElementById('nl-fp').value || 'chrome') : null;
   const ss_cipher = isSs ? (document.getElementById('nl-ss-cipher').value || 'chacha20-ietf-poly1305') : null;
+  const security = (isVmessLike || cmBase==='vmess') ? cmSecurity : '';
+  const sni = document.getElementById('nl-sec-sni').value.trim() || null;
+  const reality_priv = document.getElementById('nl-reality-priv').value.trim() || null;
+  const reality_pub = document.getElementById('nl-reality-pub').value.trim() || null;
+  const reality_sid = document.getElementById('nl-reality-sid').value.trim() || null;
+  const reality_dest = document.getElementById('nl-reality-dest').value.trim() || null;
   try{
     const url = nodeId ? ('/api/nodes/'+nodeId+'/links') : '/api/links';
-    const r=await authF(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label,limit_value:val||0,limit_unit:unit,expires_days:exp||0,note,sub_id,protocol,listen_port,public_port,mtproto_port:listen_port,mtproto_domain,alpn,fingerprint,ss_cipher})});
+    const r=await authF(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label,limit_value:val||0,limit_unit:unit,expires_days:exp||0,note,sub_id,protocol,listen_port,public_port,mtproto_port:listen_port,mtproto_domain,alpn,fingerprint,ss_cipher,security,sni,reality_priv,reality_pub,reality_sid,reality_dest})});
     if(!r.ok){
       const d=await r.json().catch(()=>({}));
       throw new Error(d.detail||'failed');
     }
-    ['nl-label','nl-val','nl-exp','nl-note','nl-port','nl-public-port','nl-mtproto-domain'].forEach(id=>document.getElementById(id).value='');
+    ['nl-label','nl-val','nl-exp','nl-note','nl-port','nl-public-port','nl-mtproto-domain','nl-sec-sni','nl-reality-priv','nl-reality-pub','nl-reality-sid','nl-reality-dest'].forEach(id=>document.getElementById(id).value='');
+    cmSetSecurity('', null);
     toast(isMt ? 'پروکسی ساخته شد ✓' : (nodeId?'کانفیگ روی نود ساخته شد ✓':'کانفیگ ساخته شد ✓'),'ok');
+    closeModal('modal-create-link');
     loadLinks();
   }catch(e){toast('✗ '+(e.message||'خطا (شاید کلید این نود اجازه‌ی ساخت از راه دور ندارد)'),'err')}
 }
@@ -3723,6 +3648,8 @@ function openEditLink(uuid,nodeId){
   document.getElementById('el-exp').value='';
   document.getElementById('el-port').value=l.listen_port||'';
   document.getElementById('el-pport').value=l.public_port||'';
+  document.getElementById('el-security').value=l.security||'';
+  document.getElementById('el-sni').value=l.sni||'';
   openModal('modal-edit-link');
 }
 async function saveEditLink(){
@@ -3735,7 +3662,9 @@ async function saveEditLink(){
   const exp=document.getElementById('el-exp').value;
   const body={label,note,limit_value:val||0,limit_unit:unit,
     listen_port:document.getElementById('el-port').value||0,
-    public_port:document.getElementById('el-pport').value||0};
+    public_port:document.getElementById('el-pport').value||0,
+    security:document.getElementById('el-security').value,
+    sni:document.getElementById('el-sni').value.trim()};
   if(exp&&Number(exp)>0)body.expires_days=Number(exp);
   try{
     const r=await authF(linkApiBase(nodeId)+uuid,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});

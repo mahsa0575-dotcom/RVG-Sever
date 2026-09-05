@@ -587,12 +587,25 @@ def _vmess_link(uuid: str, host: str, port: int, remark: str,
     return "vmess://" + base64.b64encode(payload.encode("utf-8")).decode()
 
 
+def _link_security(link: dict) -> str:
+    """امنیت مؤثر لینک: انتخاب per-config (none/tls/reality) یا پیروی از تنظیمات سرور."""
+    sec = (link.get("security") or "").strip().lower()
+    if sec in ("tls", "reality", "none"):
+        return sec
+    return "tls" if CONFIG.get("tls") else "none"
+
+
+def _link_sni(link: dict, host: str) -> str:
+    sni = (link.get("sni") or "").strip()
+    return sni or host
+
+
 def generate_share_link(uuid: str, host: str, remark: str = "RVG", protocol: str = DEFAULT_PROTOCOL) -> str:
     link = LINKS.get(uuid) or {}
     alpn = link.get("alpn", "h2")
     fp = link.get("fingerprint", "chrome")
-    tls = bool(CONFIG.get("tls"))
-    security = "tls" if tls else "none"
+    security = _link_security(link)
+    sni = _link_sni(link, host)
     port = _link_port(link)
 
     if protocol == "mtproto":
@@ -616,6 +629,17 @@ def generate_share_link(uuid: str, host: str, remark: str = "RVG", protocol: str
         password = link.get("ss_password", "")
         return generate_ss_link(host, port, cipher, password, remark, plugin=True, ws_host=host)
 
+    # ── Reality — فقط برای VLESS/Trojan روی TCP (فرمت استاندارد Xray) ──
+    if security == "reality" and (protocol == "vless" or protocol.startswith(("vless-ws", "vless-httpupgrade", "vless-xhttp", "trojan"))):
+        scheme = "trojan" if protocol.startswith("trojan") else "vless"
+        extra = "&encryption=none" if scheme == "vless" else ""
+        return (
+            f"{scheme}://{uuid}@{host}:{port}?type=tcp&security=reality"
+            f"&pbk={quote(link.get('reality_pub') or '')}&sni={quote(sni)}"
+            f"&sid={quote(link.get('reality_sid') or '')}&fp={quote(fp)}{extra}"
+            f"#{quote(remark)}"
+        )
+
     if protocol.startswith("vmess"):
         if protocol == "vmess-tcp":
             return _vmess_link(uuid, host, port, remark, "tcp")
@@ -627,7 +651,7 @@ def generate_share_link(uuid: str, host: str, remark: str = "RVG", protocol: str
         ttype = "ws" if protocol == "trojan-ws" else "httpupgrade"
         params = {
             "security": security, "type": ttype, "host": host,
-            "path": "/trojan-ws", "sni": host, "fp": fp, "alpn": alpn,
+            "path": "/trojan-ws", "sni": sni, "fp": fp, "alpn": alpn,
         }
         query = "&".join(f"{k}={quote(str(v))}" for k, v in params.items())
         return f"trojan://{uuid}@{host}:{port}?{query}#{quote(remark)}"
@@ -637,7 +661,7 @@ def generate_share_link(uuid: str, host: str, remark: str = "RVG", protocol: str
         path = f"/txhttp-siz10/{mode}/{uuid}"
         params = {
             "security": security, "type": "xhttp", "mode": mode, "host": host,
-            "path": path, "sni": host, "fp": fp, "alpn": alpn,
+            "path": path, "sni": sni, "fp": fp, "alpn": alpn,
         }
         query = "&".join(f"{k}={quote(str(v))}" for k, v in params.items())
         return f"trojan://{uuid}@{host}:{port}?{query}#{quote(remark)}"
@@ -651,7 +675,7 @@ def generate_share_link(uuid: str, host: str, remark: str = "RVG", protocol: str
             "type": ttype,
             "host": host,
             "path": path,
-            "sni": host,
+            "sni": sni,
             "fp": fp,
             "alpn": alpn,
         }
@@ -665,7 +689,7 @@ def generate_share_link(uuid: str, host: str, remark: str = "RVG", protocol: str
             "mode": mode,
             "host": host,
             "path": path,
-            "sni": host,
+            "sni": sni,
             "fp": fp,
             "alpn": alpn,
         }
@@ -1608,6 +1632,23 @@ async def get_connections(_=Depends(require_auth)):
         "raw_count": len(connections),
     }
 
+# ── Reality: تولید کلید X25519 و Short ID (فرمت استاندارد Xray) ───────────────
+@app.post("/api/reality/gen")
+async def reality_gen(_=Depends(require_auth)):
+    from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
+    from cryptography.hazmat.primitives import serialization
+    k = X25519PrivateKey.generate()
+    priv_b = k.private_bytes(
+        serialization.Encoding.Raw, serialization.PrivateFormat.Raw, serialization.NoEncryption()
+    )
+    pub_b = k.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
+    return {
+        "private_key": base64.urlsafe_b64encode(priv_b).decode().rstrip("="),
+        "public_key": base64.urlsafe_b64encode(pub_b).decode().rstrip("="),
+        "short_id": secrets.token_hex(4),
+    }
+
+
 # ── Link Management ───────────────────────────────────────────────────────────
 async def _allocate_listen_port(protocol: str, requested) -> int:
     """پورت اختصاصی کانفیگ را تعیین می‌کند:
@@ -1717,6 +1758,30 @@ async def _create_link_core(body: dict) -> dict:
             ss_cipher = DEFAULT_CIPHER
         link_data["ss_cipher"] = ss_cipher
         link_data["ss_password"] = secrets.token_urlsafe(16)
+
+    # ── امنیت (none/tls/reality) و SNI ──
+    security = (body.get("security") or "").strip().lower()
+    if security not in ("none", "tls", "reality"):
+        security = ""
+    link_data["security"] = security
+    link_data["sni"] = (body.get("sni") or "").strip()[:253]
+    if security == "reality":
+        rpriv = (body.get("reality_priv") or "").strip()
+        rpub = (body.get("reality_pub") or "").strip()
+        if not (rpriv and rpub):
+            from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
+            from cryptography.hazmat.primitives import serialization
+            k = X25519PrivateKey.generate()
+            priv_b = k.private_bytes(
+                serialization.Encoding.Raw, serialization.PrivateFormat.Raw, serialization.NoEncryption()
+            )
+            pub_b = k.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
+            rpriv = base64.urlsafe_b64encode(priv_b).decode().rstrip("=")
+            rpub = base64.urlsafe_b64encode(pub_b).decode().rstrip("=")
+        link_data["reality_priv"] = rpriv
+        link_data["reality_pub"] = rpub
+        link_data["reality_sid"] = (body.get("reality_sid") or secrets.token_hex(4)).strip()[:16]
+        link_data["reality_dest"] = (body.get("reality_dest") or "").strip()[:253]
 
     if protocol.startswith("vmess"):
         from protocol.vmess import vmess as vmess_codec
@@ -1859,6 +1924,17 @@ async def update_link(uid: str, request: Request, _=Depends(require_auth)):
                     port_restart_needed = True
                 else:
                     port_manager.sync_ports_for_link(link, uid, app, CONFIG["port"])
+        if "security" in body:
+            sec = str(body.get("security") or "").strip().lower()
+            link["security"] = sec if sec in ("none", "tls", "reality") else ""
+        if "sni" in body:
+            link["sni"] = str(body.get("sni") or "").strip()[:253]
+        if body.get("reality_priv"):
+            link["reality_priv"] = str(body["reality_priv"]).strip()[:100]
+        if body.get("reality_pub"):
+            link["reality_pub"] = str(body["reality_pub"]).strip()[:100]
+        if "reality_sid" in body:
+            link["reality_sid"] = str(body.get("reality_sid") or "").strip()[:16]
         if "public_port" in body:
             raw = body.get("public_port")
             try:
