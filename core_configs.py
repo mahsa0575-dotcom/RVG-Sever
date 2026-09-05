@@ -61,18 +61,58 @@ def _listen_port(link: dict, fallback: int = 0) -> int:
 
 # ── گواهی TLS خودامضا (وقتی کاربر فایل نداده باشد) ────────────────────────────
 
-def _ensure_tls_cert(link: dict, uuid: str) -> tuple[Path, Path]:
-    """مسیر گواهی/کلید TLS را برمی‌گرداند — فایل کاربر یا self-signed خودکار."""
-    cert_dir = DATA_DIR / "certs"
+def ensure_panel_cert(data_dir: Path | None = None, host: str = "") -> tuple[Path, Path]:
+    """گواهی سراسری پنل — مثل S-UI یک‌بار در اول کار ساخته می‌شود و همه‌ی
+    اینباندهای TLS/Hysteria2/TUIC از همین استفاده می‌کنند (self-signed ۱۰ ساله)."""
+    cert_dir = Path(data_dir or DATA_DIR) / "certs"
     cert_dir.mkdir(parents=True, exist_ok=True)
+    crt = cert_dir / "panel.crt"
+    key = cert_dir / "panel.key"
+    if crt.exists() and key.exists():
+        return crt, key
+
+    host = (host or "").strip() or "rvg.local"
+    key_p = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    subject = issuer = x509.Name([
+        x509.NameAttribute(x509.NameOID.COMMON_NAME, "RVG Gateway"),
+        x509.NameAttribute(x509.NameOID.ORGANIZATION_NAME, "RVG"),
+    ])
+    san = [x509.DNSName("localhost"), x509.IPAddress(ipaddress.ip_address("127.0.0.1"))]
+    try:
+        if host.replace(".", "").isdigit() and host.count(".") == 3:
+            san.append(x509.IPAddress(ipaddress.ip_address(host)))
+        else:
+            san.append(x509.DNSName(host))
+    except Exception:
+        pass
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(key_p.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.now(timezone.utc) - timedelta(days=1))
+        .not_valid_after(datetime.now(timezone.utc) + timedelta(days=3650))
+        .add_extension(x509.SubjectAlternativeName(san), critical=False)
+        .sign(key_p, hashes.SHA256())
+    )
+    crt.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+    key.write_bytes(key_p.private_bytes(
+        serialization.Encoding.PEM,
+        serialization.PrivateFormat.TraditionalOpenSSL,
+        serialization.NoEncryption(),
+    ))
+    x509.load_pem_x509_certificate(crt.read_bytes())  # اعتبارسنجی
+    logger.info(f"core_configs: گواهی سراسری پنل ساخته شد → {crt}")
+    return crt, key
+
+
+def _ensure_tls_cert(link: dict, uuid: str) -> tuple[Path, Path]:
+    """مسیر گواهی/کلید TLS: فایل کاربر اگر داده باشد، وگرنه گواهی سراسری پنل."""
     user_cert, user_key = (link.get("tls_cert") or "").strip(), (link.get("tls_key") or "").strip()
     if user_cert and user_key:
         return Path(user_cert), Path(user_key)
-
-    crt = cert_dir / f"{uuid}.crt"
-    key = cert_dir / f"{uuid}.key"
-    if crt.exists() and key.exists():
-        return crt, key
+    return ensure_panel_cert()
 
     sni = (link.get("sni") or "").strip() or "rvg.local"
     key_p = rsa.generate_private_key(public_exponent=65537, key_size=2048)

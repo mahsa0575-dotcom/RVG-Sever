@@ -66,7 +66,18 @@ logger = logging.getLogger("RVG-Gateway")
 
 IRAN_TZ = ZoneInfo("Asia/Tehran")
 
-app = FastAPI(title="RVG Gateway - codebox", docs_url=None, redoc_url=None)
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def lifespan(_app):
+    """startup/shutdown مدرن — روی همه‌ی نسخه‌های FastAPI تضمین اجرا دارد."""
+    await startup()
+    yield
+    await shutdown()
+
+
+app = FastAPI(title="RVG Gateway - codebox", docs_url=None, redoc_url=None, lifespan=lifespan)
 
 # وقتی مستقیم با `python main.py` اجرا میشه، این ماژول با نام "__main__" ثبت
 # میشه نه "main". چون protocol/vless/vless.py و protocol/trojan/trojan.py با
@@ -387,8 +398,7 @@ async def require_auth(request: Request):
         raise HTTPException(status_code=401, detail="unauthorized")
     return token
 
-# ── Startup / Shutdown ────────────────────────────────────────────────────────
-@app.on_event("startup")
+# ── Core sync ─────────────────────────────────────────────────────────────────
 async def _sync_cores():
     """کانفیگ هسته‌های xray/sing-box را از روی لینک‌ها بازتولید و پروسه‌ها را
     همگام می‌کند (مدل 3x-ui/S-UI: یک پروسه برای کل هسته)."""
@@ -438,7 +448,7 @@ async def _auto_detect_host():
     detected = ""
     for url in ("https://api.ipify.org", "https://ipv4.icanhazip.com"):
         try:
-            r = await http_client.get(url, timeout=8)
+            r = await http_client.get(url, timeout=httpx.Timeout(3.0, connect=2.0))
             ip = (r.text or "").strip()
             # فقط یک IP تمیز — بدون خط جدید، فاصله یا کاراکتر غیرمنتظره
             if ip and ip.replace(".", "").isdigit() and ip.count(".") == 3:
@@ -456,16 +466,21 @@ async def _auto_detect_host():
                 s.close()
         except Exception:
             pass
-    if detected:
-        CONFIG["host"] = detected
-        logger.info(
-            f"دامنه/IP عمومی خودکار تشخیص داده شد: {detected} — "
-            f"از پنل (تنظیمات → تنظیمات سرور) قابل تغییر است"
-        )
-        log_activity("system", f"IP عمومی خودکار تنظیم شد: {detected}", "info")
+    if not detected:
+        return
+    # اگر کاربر در این فاصله دستی تنظیم کرد، تنظیم او اولویت دارد
+    if (CONFIG.get("host") or "").strip():
+        return
+    CONFIG["host"] = detected
+    logger.info(
+        f"دامنه/IP عمومی خودکار تشخیص داده شد: {detected} — "
+        f"از پنل (تنظیمات → تنظیمات سرور) قابل تغییر است"
+    )
+    log_activity("system", f"IP عمومی خودکار تنظیم شد: {detected}", "info")
 
 
 async def startup():
+    """راه‌اندازی پنل — توسط lifespan صدا زده می‌شود."""
     spawn(central.heartbeat_loop())
     global http_client
     limits = httpx.Limits(max_connections=500, max_keepalive_connections=100)
@@ -475,8 +490,14 @@ async def startup():
     )
     await load_state()
     await ensure_default_link()
-    await _auto_detect_host()
+    # گواهی سراسری پنل (مثل S-UI) — اول کار ساخته می‌شود
+    try:
+        core_configs.ensure_panel_cert(DATA_DIR, get_host())
+    except Exception as exc:
+        logger.warning(f"ساخت گواهی سراسری ناموفق بود: {exc}")
     await _register_vmess_users()
+    # تشخیص IP عمومی در پس‌زمینه — هرگز استارت پنل را قفل نمی‌کند
+    spawn(_auto_detect_host())
     spawn(_sync_cores())
     await _restart_mtproto_instances()
     await port_manager.sync_all(LINKS, LINKS_LOCK, app, CONFIG["port"])
@@ -611,7 +632,6 @@ async def _update_mtproto_ad_tag(uuid: str, ad_tag: str):
         spawn(save_state())
 
 
-@app.on_event("shutdown")
 async def shutdown():
     await save_state()
     await mtproto.stop_all()

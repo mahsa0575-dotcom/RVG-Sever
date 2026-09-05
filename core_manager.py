@@ -29,6 +29,9 @@ CORES_DIR = DATA_DIR / "cores"
 
 XRAY_REPO = "XTLS/Xray-core"
 SINGBOX_REPO = "SagerNet/sing-box"
+# نسخه‌ی پین‌شده sing-box — 1.11 همه‌ی پروتکل‌ها (hysteria 1+2، tuic، reality) را دارد؛
+# نسخه‌های 1.12+ پروتکل‌های قدیمی را حذف کرده‌اند و کانفیگ ما را رد می‌کنند.
+SINGBOX_VERSION = "1.11.15"
 
 _state = {
     # name → {"bin": Path|None, "version": str|None, "proc": asyncio.subprocess|None,
@@ -114,11 +117,10 @@ async def install(name: str) -> Path:
         logger.info(f"core_manager: Xray نصب شد → {binp}")
         return binp
 
-    # sing-box: sing-box-<ver>-linux-amd64.tar.gz
-    needle = "linux-amd64" if arch == "64" else f"linux-{arch}"
-    url = _gh_latest_asset(SINGBOX_REPO, needle)
-    if not url:
-        raise RuntimeError("ریلیز sing-box پیدا نشد")
+    # sing-box: نسخه‌ی پین‌شده — sing-box-<ver>-linux-<arch>.tar.gz
+    arch_str = "amd64" if arch == "64" else ("arm64" if arch == "arm64-v8a" else arch)
+    url = (f"https://github.com/{SINGBOX_REPO}/releases/download/"
+           f"v{SINGBOX_VERSION}/sing-box-{SINGBOX_VERSION}-linux-{arch_str}.tar.gz")
     await _download(url, tmp)
     import tarfile
     with tarfile.open(tmp, "r:gz") as t:

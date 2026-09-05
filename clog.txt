@@ -1,0 +1,19 @@
+2026-09-06 01:05:27,351 [INFO] SECRET_KEY جدید ساخته و در دیسک ذخیره شد (پایدار بین ری‌استارت‌ها).
+2026-09-06 01:05:27,351 [INFO] MTP: usage_callback ثبت شد
+================================================================
+  RVG Gateway v10.0 — VPS Edition
+  پنل:      http://0.0.0.0:8918/dashboard
+  دامنه:    (در تنظیمات پنل ست کنید)
+  داده:     F:\project\test-main\test-main\data
+================================================================
+INFO:     Started server process [8368]
+INFO:     Waiting for application startup.
+2026-09-06 01:05:27,537 [INFO] core_configs: گواهی سراسری پنل ساخته شد → F:\project\test-main\test-main\data\certs\panel.crt
+2026-09-06 01:05:27,537 [INFO] RVG Gateway v10.0 started on port 8918
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8918 (Press CTRL+C to quit)
+2026-09-06 01:05:28,116 [INFO] HTTP Request: GET https://api.ipify.org "HTTP/1.1 200 OK"
+2026-09-06 01:05:28,116 [INFO] دامنه/IP عمومی خودکار تشخیص داده شد: 5.214.41.226 — از پنل (تنظیمات → تنظیمات سرور) قابل تغییر است
+INFO:     127.0.0.1:1914 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1916 - "POST /api/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1917 - "GET /api/settings/server HTTP/1.1" 200 OK
