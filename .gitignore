@@ -224,3 +224,7 @@ data*/
 .venv/
 .venvp/
 venv/
+
+# SSH credentials — never commit
+tests/_ssh_*.py
+tests/_s[0-9]*.py
