@@ -187,6 +187,16 @@ async def start_core(name: str, config_path: Path) -> dict:
         raise RuntimeError(f"اجرای هسته‌ی {name} فقط روی لینوکس ممکن است")
     binp = await ensure_installed(name)
     await stop_core(name)
+    # صبر تا پورت‌های اینباند واقعاً آزاد شوند (نمونه‌ی قبلی گاهی دیر می‌میرد)
+    try:
+        cfg = json.loads(config_path.read_text())
+        ports = [int(i.get("listen_port")) for i in cfg.get("inbounds", []) if i.get("listen_port")]
+        for _ in range(40):
+            if all(_port_free(int(pt)) for pt in ports):
+                break
+            await asyncio.sleep(0.3)
+    except Exception:
+        await asyncio.sleep(1)
 
     log_path = _core_dir(name) / "core.log"
     logf = open(log_path, "ab")
